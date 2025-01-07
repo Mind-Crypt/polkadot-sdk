@@ -42,7 +42,7 @@ pub mod weights;
 
 use crate::{
 	evm::{runtime::GAS_PRICE, GenericTransaction},
-	exec::{AccountIdOf, ExecError, Executable, Ext, Key, Origin, Stack as ExecStack},
+	exec::{AccountIdOf, ExecError, Executable, Key, Origin, Stack as ExecStack},
 	gas::GasMeter,
 	storage::{meter::Meter as StorageMeter, ContractInfo, DeletionQueueManager},
 	wasm::{CodeInfo, RuntimeCosts, WasmBlob},
@@ -213,9 +213,8 @@ pub mod pallet {
 		type DepositPerItem: Get<BalanceOf<Self>>;
 
 		/// The percentage of the storage deposit that should be held for using a code hash.
-		/// Instantiating a contract, or calling [`chain_extension::Ext::lock_delegate_dependency`]
-		/// protects the code from being removed. In order to prevent abuse these actions are
-		/// protected with a percentage of the code deposit.
+		/// Instantiating a contract, protects the code from being removed. In order to prevent
+		/// abuse these actions are protected with a percentage of the code deposit.
 		#[pallet::constant]
 		type CodeHashLockupDepositPercent: Get<Perbill>;
 
@@ -985,8 +984,8 @@ pub mod pallet {
 				} else {
 					return Err(<Error<T>>::ContractNotFound.into());
 				};
-				<ExecStack<T, WasmBlob<T>>>::increment_refcount(code_hash)?;
-				<ExecStack<T, WasmBlob<T>>>::decrement_refcount(contract.code_hash);
+				<CodeInfo<T>>::increment_refcount(code_hash)?;
+				<CodeInfo<T>>::decrement_refcount(contract.code_hash);
 				Self::deposit_event(Event::ContractCodeUpdated {
 					contract: dest,
 					new_code_hash: code_hash,
