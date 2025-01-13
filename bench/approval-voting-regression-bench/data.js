@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736793799323,
+  "lastUpdate": 1736807065165,
   "repoUrl": "https://github.com/paritytech/polkadot-sdk",
   "entries": {
     "approval-voting-regression-bench": [
@@ -55591,6 +55591,105 @@ window.BENCHMARK_DATA = {
           {
             "name": "approval-voting-parallel/approval-voting-gather-signatures",
             "value": 0.006152213020000003,
+            "unit": "seconds"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polkadotdom@gmail.com",
+            "name": "polka.dom",
+            "username": "PolkadotDom"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cccefdd965c39498825f34e105979c447b315359",
+          "message": "Remove usage of the pallet::getter macro from pallet-grandpa (#4529)\n\nAs per #3326, removes pallet::getter macro usage from pallet-grandpa.\nThe syntax `StorageItem::<T, I>::get()` should be used instead.\n\ncc @muraca\n\n---------\n\nCo-authored-by: Bastian Köcher <git@kchr.de>",
+          "timestamp": "2025-01-13T21:22:32Z",
+          "tree_id": "4c2f624d197dc810131dd40e278a039993fb39b2",
+          "url": "https://github.com/paritytech/polkadot-sdk/commit/cccefdd965c39498825f34e105979c447b315359"
+        },
+        "date": 1736807048530,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Sent to peers",
+            "value": 63628.52999999999,
+            "unit": "KiB"
+          },
+          {
+            "name": "Received from peers",
+            "value": 52938.59999999999,
+            "unit": "KiB"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-0",
+            "value": 2.4317604745399986,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-1",
+            "value": 2.420770517510001,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-subsystem",
+            "value": 0.46769883115997485,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-2",
+            "value": 2.479768160370001,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-gather-signatures",
+            "value": 0.006023985630000003,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-distribution/test-environment",
+            "value": 0.00001777434,
+            "unit": "seconds"
+          },
+          {
+            "name": "test-environment",
+            "value": 3.332402547512392,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-db",
+            "value": 2.1053995721600005,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-distribution",
+            "value": 0.00001777434,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-3",
+            "value": 2.4177580778999994,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting",
+            "value": 0.00001986191,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting/test-environment",
+            "value": 0.00001986191,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel",
+            "value": 12.329179619269976,
             "unit": "seconds"
           }
         ]
