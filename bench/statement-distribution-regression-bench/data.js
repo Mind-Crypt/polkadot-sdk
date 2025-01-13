@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736793823461,
+  "lastUpdate": 1736807089813,
   "repoUrl": "https://github.com/paritytech/polkadot-sdk",
   "entries": {
     "statement-distribution-regression-bench": [
@@ -28199,6 +28199,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test-environment",
             "value": 0.04468455852999995,
+            "unit": "seconds"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polkadotdom@gmail.com",
+            "name": "polka.dom",
+            "username": "PolkadotDom"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cccefdd965c39498825f34e105979c447b315359",
+          "message": "Remove usage of the pallet::getter macro from pallet-grandpa (#4529)\n\nAs per #3326, removes pallet::getter macro usage from pallet-grandpa.\nThe syntax `StorageItem::<T, I>::get()` should be used instead.\n\ncc @muraca\n\n---------\n\nCo-authored-by: Bastian Köcher <git@kchr.de>",
+          "timestamp": "2025-01-13T21:22:32Z",
+          "tree_id": "4c2f624d197dc810131dd40e278a039993fb39b2",
+          "url": "https://github.com/paritytech/polkadot-sdk/commit/cccefdd965c39498825f34e105979c447b315359"
+        },
+        "date": 1736807072951,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Received from peers",
+            "value": 106.39999999999996,
+            "unit": "KiB"
+          },
+          {
+            "name": "Sent to peers",
+            "value": 127.93799999999993,
+            "unit": "KiB"
+          },
+          {
+            "name": "test-environment",
+            "value": 0.04513228505399994,
+            "unit": "seconds"
+          },
+          {
+            "name": "statement-distribution",
+            "value": 0.03525809880999998,
             "unit": "seconds"
           }
         ]
