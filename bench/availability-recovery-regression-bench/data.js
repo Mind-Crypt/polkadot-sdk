@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736793750881,
+  "lastUpdate": 1736807016853,
   "repoUrl": "https://github.com/paritytech/polkadot-sdk",
   "entries": {
     "availability-recovery-regression-bench": [
@@ -37699,6 +37699,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test-environment",
             "value": 0.23342409143333337,
+            "unit": "seconds"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polkadotdom@gmail.com",
+            "name": "polka.dom",
+            "username": "PolkadotDom"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cccefdd965c39498825f34e105979c447b315359",
+          "message": "Remove usage of the pallet::getter macro from pallet-grandpa (#4529)\n\nAs per #3326, removes pallet::getter macro usage from pallet-grandpa.\nThe syntax `StorageItem::<T, I>::get()` should be used instead.\n\ncc @muraca\n\n---------\n\nCo-authored-by: Bastian Köcher <git@kchr.de>",
+          "timestamp": "2025-01-13T21:22:32Z",
+          "tree_id": "4c2f624d197dc810131dd40e278a039993fb39b2",
+          "url": "https://github.com/paritytech/polkadot-sdk/commit/cccefdd965c39498825f34e105979c447b315359"
+        },
+        "date": 1736806999959,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Sent to peers",
+            "value": 1.6666666666666665,
+            "unit": "KiB"
+          },
+          {
+            "name": "Received from peers",
+            "value": 307203,
+            "unit": "KiB"
+          },
+          {
+            "name": "test-environment",
+            "value": 0.2342470417666666,
+            "unit": "seconds"
+          },
+          {
+            "name": "availability-recovery",
+            "value": 11.308696618033338,
             "unit": "seconds"
           }
         ]
