@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736793775372,
+  "lastUpdate": 1736807040839,
   "repoUrl": "https://github.com/paritytech/polkadot-sdk",
   "entries": {
     "availability-distribution-regression-bench": [
@@ -46789,6 +46789,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "test-environment",
             "value": 0.008575704006666754,
+            "unit": "seconds"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "polkadotdom@gmail.com",
+            "name": "polka.dom",
+            "username": "PolkadotDom"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cccefdd965c39498825f34e105979c447b315359",
+          "message": "Remove usage of the pallet::getter macro from pallet-grandpa (#4529)\n\nAs per #3326, removes pallet::getter macro usage from pallet-grandpa.\nThe syntax `StorageItem::<T, I>::get()` should be used instead.\n\ncc @muraca\n\n---------\n\nCo-authored-by: Bastian Köcher <git@kchr.de>",
+          "timestamp": "2025-01-13T21:22:32Z",
+          "tree_id": "4c2f624d197dc810131dd40e278a039993fb39b2",
+          "url": "https://github.com/paritytech/polkadot-sdk/commit/cccefdd965c39498825f34e105979c447b315359"
+        },
+        "date": 1736807024355,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Sent to peers",
+            "value": 18481.666666666653,
+            "unit": "KiB"
+          },
+          {
+            "name": "Received from peers",
+            "value": 433.3333333333332,
+            "unit": "KiB"
+          },
+          {
+            "name": "bitfield-distribution",
+            "value": 0.024667743779999994,
+            "unit": "seconds"
+          },
+          {
+            "name": "availability-store",
+            "value": 0.18094101638,
+            "unit": "seconds"
+          },
+          {
+            "name": "test-environment",
+            "value": 0.008761370886666744,
+            "unit": "seconds"
+          },
+          {
+            "name": "availability-distribution",
+            "value": 0.016274109853333326,
             "unit": "seconds"
           }
         ]
