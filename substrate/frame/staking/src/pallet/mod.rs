@@ -847,6 +847,8 @@ pub mod pallet {
 		BoundNotMet,
 		/// Used when attempting to use deprecated controller account logic.
 		ControllerDeprecated,
+		/// Nomination deprecated
+		NominationDeprecated,
 	}
 
 	#[pallet::hooks]
@@ -1194,6 +1196,11 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			targets: Vec<AccountIdLookupOf<T>>,
 		) -> DispatchResult {
+			log::warn!("Call::nominate is deprecated, use Call::nominate_v2 instead.");
+			ensure!(
+				MaxNominatorsCount::<T>::get() > Some(0),
+				Error::<T>::NominationDeprecated
+			);
 			let controller = ensure_signed(origin)?;
 
 			let ledger = Self::ledger(StakingAccount::Controller(controller.clone()))?;
