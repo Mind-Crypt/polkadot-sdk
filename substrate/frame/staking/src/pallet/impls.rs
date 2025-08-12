@@ -51,7 +51,7 @@ use crate::{
 	election_size_tracker::StaticTracker, log, slashing, weights::WeightInfo, ActiveEraInfo,
 	BalanceOf, EraInfo, EraPayout, Exposure, ExposureOf, Forcing, IndividualExposure,
 	MaxNominationsOf, MaxWinnersOf, Nominations, NominationsQuota, PositiveImbalanceOf,
-	RewardDestination, SessionInterface, StakingLedger, ValidatorPrefs,
+	RewardDestination, SessionInterface, StakingLedger, ValidatorPrefs, GuardianPrefs,
 };
 
 use super::pallet::*;
@@ -991,7 +991,7 @@ impl<T: Config> Pallet<T> {
 		Nominators::<T>::insert(who, nominations);
 
 		debug_assert_eq!(
-			Nominators::<T>::count() + Validators::<T>::count(),
+			Nominators::<T>::count() + Validators::<T>::count() + Guardians::<T>::count(),
 			T::VoterList::count()
 		);
 	}
@@ -1014,7 +1014,7 @@ impl<T: Config> Pallet<T> {
 		};
 
 		debug_assert_eq!(
-			Nominators::<T>::count() + Validators::<T>::count(),
+			Nominators::<T>::count() + Validators::<T>::count() + Guardians::<T>::count(),
 			T::VoterList::count()
 		);
 
@@ -1037,7 +1037,7 @@ impl<T: Config> Pallet<T> {
 		Validators::<T>::insert(who, prefs);
 
 		debug_assert_eq!(
-			Nominators::<T>::count() + Validators::<T>::count(),
+			Nominators::<T>::count() + Validators::<T>::count() + Guardians::<T>::count(),
 			T::VoterList::count()
 		);
 	}
@@ -1059,7 +1059,52 @@ impl<T: Config> Pallet<T> {
 		};
 
 		debug_assert_eq!(
-			Nominators::<T>::count() + Validators::<T>::count(),
+			Nominators::<T>::count() + Validators::<T>::count() + Guardians::<T>::count(),
+			T::VoterList::count()
+		);
+
+		outcome
+	}
+
+	/// This function will add a guardian to the `Guardians` storage map.
+	///
+	/// If the guardian already exists, their preferences will be updated.
+	///
+	/// NOTE: you must ALWAYS use this function to add a guardian to the system. Any access to
+	/// `Guardians` or `VoterList` outside of this function is almost certainly
+	/// wrong.
+	pub fn do_add_guardian(who: &T::AccountId, prefs: GuardianPrefs) {
+		if !Guardians::<T>::contains_key(who) {
+			// maybe update sorted list.
+			let _ = T::VoterList::on_insert(who.clone(), Self::weight_of(who))
+				.defensive_unwrap_or_default();
+		}
+		Guardians::<T>::insert(who, prefs);
+
+		debug_assert_eq!(
+			Nominators::<T>::count() + Validators::<T>::count() + Guardians::<T>::count(),
+			T::VoterList::count()
+		);
+	}
+
+	/// This function will remove a guardian from the `Guardians` storage map.
+	///
+	/// Returns true if `who` was removed from `Guardians`, otherwise false.
+	///
+	/// NOTE: you must ALWAYS use this function to remove a guardian from the system. Any access to
+	/// `Guardians` or `VoterList` outside of this function is almost certainly
+	/// wrong.
+	pub fn do_remove_guardian(who: &T::AccountId) -> bool {
+		let outcome = if Guardians::<T>::contains_key(who) {
+			Guardians::<T>::remove(who);
+			let _ = T::VoterList::on_remove(who).defensive();
+			true
+		} else {
+			false
+		};
+
+		debug_assert_eq!(
+			Nominators::<T>::count() + Validators::<T>::count() + Guardians::<T>::count(),
 			T::VoterList::count()
 		);
 
@@ -1852,7 +1897,7 @@ impl<T: Config> Pallet<T> {
 	fn check_count() -> Result<(), TryRuntimeError> {
 		ensure!(
 			<T as Config>::VoterList::count() ==
-				Nominators::<T>::count() + Validators::<T>::count(),
+				Nominators::<T>::count() + Validators::<T>::count() + Guardians::<T>::count(),
 			"wrong external count"
 		);
 		ensure!(

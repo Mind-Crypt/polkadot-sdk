@@ -50,7 +50,7 @@ use crate::{
 	slashing, weights::WeightInfo, AccountIdLookupOf, ActiveEraInfo, BalanceOf, EraPayout,
 	EraRewardPoints, Exposure, ExposurePage, Forcing, MaxNominationsOf, NegativeImbalanceOf,
 	Nominations, NominationsQuota, PositiveImbalanceOf, RewardDestination, SessionInterface,
-	StakingLedger, UnappliedSlash, UnlockChunk, ValidatorPrefs,
+	StakingLedger, UnappliedSlash, UnlockChunk, ValidatorPrefs, GuardianPrefs,
 };
 
 // The speculative number of spans are used as an input of the weight annotation of
@@ -354,6 +354,29 @@ pub mod pallet {
 	/// When this value is not set, no limits are enforced.
 	#[pallet::storage]
 	pub type MaxValidatorsCount<T> = StorageValue<_, u32, OptionQuery>;
+
+	/// The ideal number of active validators.
+	#[pallet::storage]
+	#[pallet::getter(fn guardian_count)]
+	pub type GuardianCount<T> = StorageValue<_, u32, ValueQuery>;
+
+	/// The minimum active bond to become and maintain the role of a validator.
+	#[pallet::storage]
+	pub type MinGuardianBond<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
+	/// The maximum guardian count before we stop allowing new guardians to join.
+	///
+	/// When this value is not set, no limits are enforced.
+	#[pallet::storage]
+	pub type MaxGuardiansCount<T> = StorageValue<_, u32, OptionQuery>;
+
+	/// The map from (wannabe) validator stash key to the preferences of that validator.
+	///
+	/// TWOX-NOTE: SAFE since `AccountId` is a secure hash.
+	#[pallet::storage]
+	#[pallet::getter(fn guardians)]
+	pub type Guardians<T: Config> =
+		CountedStorageMap<_, Twox64Concat, T::AccountId, GuardianPrefs, ValueQuery>;
 
 	/// The map from nominator stash key to their nomination preferences, namely the validators that
 	/// they wish to support.
@@ -731,7 +754,7 @@ pub mod pallet {
 			// all voters are reported to the `VoterList`.
 			assert_eq!(
 				T::VoterList::count(),
-				Nominators::<T>::count() + Validators::<T>::count(),
+				Nominators::<T>::count() + Validators::<T>::count() + Guardians::<T>::count(),
 				"not all genesis stakers were inserted into sorted list provider, something is wrong."
 			);
 		}
@@ -779,6 +802,8 @@ pub mod pallet {
 		PayoutStarted { era_index: EraIndex, validator_stash: T::AccountId },
 		/// A validator has set their preferences.
 		ValidatorPrefsSet { stash: T::AccountId, prefs: ValidatorPrefs },
+		/// A validator has set their preferences.
+		GuardianPrefsSet { stash: T::AccountId, prefs: GuardianPrefs },
 		/// Voters size limit reached.
 		SnapshotVotersSizeExceeded { size: u32 },
 		/// Targets size limit reached.
@@ -841,6 +866,9 @@ pub mod pallet {
 		/// There are too many validator candidates in the system. Governance needs to adjust the
 		/// staking settings to keep things safe for the runtime.
 		TooManyValidators,
+		/// There are too many guardian candidates in the system. Governance needs to adjust the
+		/// staking settings to keep things safe for the runtime.
+		TooManyGuardians,
 		/// Commission is too low. Must be at least `MinCommission`.
 		CommissionTooLow,
 		/// Some bound is not met.
@@ -1174,6 +1202,7 @@ pub mod pallet {
 			}
 
 			Self::do_remove_nominator(stash);
+			Self::do_remove_guardian(stash);
 			Self::do_add_validator(stash, prefs.clone());
 			Self::deposit_event(Event::<T>::ValidatorPrefsSet { stash: ledger.stash, prefs });
 
@@ -1253,6 +1282,7 @@ pub mod pallet {
 			};
 
 			Self::do_remove_validator(stash);
+			Self::do_remove_guardian(stash);
 			Self::do_add_nominator(stash, nominations);
 			Ok(())
 		}
@@ -1976,6 +2006,45 @@ pub mod pallet {
 				<Ledger<T>>::insert(stash, ledger);
 			}
 			Ok(Some(T::WeightInfo::deprecate_controller_batch(controllers.len() as u32)).into())
+		}
+
+		/// Declare the desire to guard for the origin controller.
+		///
+		/// Effects will be felt at the beginning of the next era.
+		///
+		/// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
+		#[pallet::call_index(29)]
+		#[pallet::weight(T::WeightInfo::guard())]
+		pub fn guard(origin: OriginFor<T>, prefs: GuardianPrefs) -> DispatchResult {
+			let controller = ensure_signed(origin)?;
+
+			let ledger = Self::ledger(Controller(controller))?;
+
+			ensure!(ledger.active >= MinGuardianBond::<T>::get(), Error::<T>::InsufficientBond);
+			let stash = &ledger.stash;
+
+			// ensure their commission is correct.
+			ensure!(prefs.commission >= MinCommission::<T>::get(), Error::<T>::CommissionTooLow);
+
+			// Only check limits if they are not already a guardian.
+			if !Guardians::<T>::contains_key(stash) {
+				// If this error is reached, we need to adjust the `MinGuardianBond` and start
+				// calling `chill_other`. Until then, we explicitly block new guardians to protect
+				// the runtime.
+				if let Some(max_guardians) = MaxGuardiansCount::<T>::get() {
+					ensure!(
+						Guardians::<T>::count() < max_guardians,
+						Error::<T>::TooManyGuardians
+					);
+				}
+			}
+
+			Self::do_remove_nominator(stash);
+			Self::do_remove_validator(stash);
+			Self::do_add_guardian(stash, prefs.clone());
+			Self::deposit_event(Event::<T>::GuardianPrefsSet { stash: ledger.stash, prefs });
+
+			Ok(())
 		}
 	}
 }

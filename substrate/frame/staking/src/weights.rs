@@ -55,6 +55,7 @@ pub trait WeightInfo {
 	fn withdraw_unbonded_update(s: u32, ) -> Weight;
 	fn withdraw_unbonded_kill(s: u32, ) -> Weight;
 	fn validate() -> Weight;
+	fn guard() -> Weight;
 	fn kick(k: u32, ) -> Weight;
 	fn nominate(n: u32, ) -> Weight;
 	fn chill() -> Weight;
@@ -246,6 +247,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 		Weight::from_parts(53_308_000, 4556)
 			.saturating_add(T::DbWeight::get().reads(11_u64))
 			.saturating_add(T::DbWeight::get().writes(5_u64))
+	}
+	/// TODO: Evaluate appropriate weight for `guard` call.
+	/// This is a placeholder implementation as the `guard` function is similar to `validate`.
+	fn guard() -> Weight {
+		Self::validate()
 	}
 	/// Storage: `Staking::Ledger` (r:1 w:0)
 	/// Proof: `Staking::Ledger` (`max_values`: None, `max_size`: Some(1091), added: 3566, mode: `MaxEncodedLen`)
@@ -967,6 +973,11 @@ impl WeightInfo for () {
 		Weight::from_parts(53_308_000, 4556)
 			.saturating_add(RocksDbWeight::get().reads(11_u64))
 			.saturating_add(RocksDbWeight::get().writes(5_u64))
+	}
+	/// TODO: Evaluate appropriate weight for `guard` call.
+	/// This is a placeholder implementation as the `guard` function is similar to `Self::validate`.
+	fn guard() -> Weight {
+		Self::validate()
 	}
 	/// Storage: `Staking::Ledger` (r:1 w:0)
 	/// Proof: `Staking::Ledger` (`max_values`: None, `max_size`: Some(1091), added: 3566, mode: `MaxEncodedLen`)

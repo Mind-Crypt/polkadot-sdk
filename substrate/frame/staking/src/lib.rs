@@ -420,6 +420,15 @@ pub struct ValidatorPrefs {
 	pub blocked: bool,
 }
 
+/// Preference of what happens regarding validation.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Default, MaxEncodedLen)]
+pub struct GuardianPrefs {
+	/// Reward that validator takes up-front; only the rest is split between themselves and
+	/// nominators.
+	#[codec(compact)]
+	pub commission: Perbill,
+}
+
 /// Just a Balance/BlockNumber tuple to encode when a chunk of funds will be unlocked.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct UnlockChunk<Balance: HasCompact + MaxEncodedLen> {
