@@ -1,0 +1,65 @@
+[package]
+authors = ["MindCrypt Project <info@mindcrypt.com>"]
+description = "Guardian Network"
+edition = "2021"
+homepage = "https://mindcrypt.com"
+license = "Apache-2.0"
+name = "pallet-guardian"
+repository = "https://github.com/Mind-Crypt/polkadot-sdk"
+version = "0.0.1"
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = {package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"]}
+impl-trait-for-tuples = "0.2"
+log = {version = "0.4.17", default-features = false}
+scale-info = {version = "2.10.0", default-features = false, features = ["derive", "serde"]}
+serde = {version = "1.0.197", default-features = false, features = ["derive"], optional = true}
+serde_json = {version = "1.0.111", optional = true}
+
+# Substrate
+frame-benchmarking = {path = "../benchmarking", default-features = false, optional = true}
+frame-support = {path = "../support", default-features = false}
+frame-system = {path = "../system", default-features = false}
+sp-arithmetic = {path = "../../primitives/arithmetic", default-features = false}
+sp-core = {path = "../../primitives/core", default-features = false, features = ["serde"]}
+sp-io = {path = "../../primitives/io", default-features = false}
+sp-runtime = {path = "../../primitives/runtime", default-features = false, features = ["serde"]}
+sp-session = {path = "../../primitives/session", default-features = false}
+sp-staking = {path = "../../primitives/staking", default-features = false, features = ["serde"]}
+sp-std = {path = "../../primitives/std", default-features = false}
+sp-trie = {path = "../../primitives/trie", default-features = false, optional = true}
+
+[features]
+default = ["historical", "std"]
+historical = ["sp-trie"]
+runtime-benchmarks = [
+  "frame-benchmarking",
+  "frame-support/runtime-benchmarks",
+  "frame-system/runtime-benchmarks",
+  "sp-runtime/runtime-benchmarks",
+]
+std = [
+  "sp-arithmetic/std",
+  "codec/std",
+  "frame-support/std",
+  "frame-system/std",
+  "log/std",
+  "scale-info/std",
+  "sp-core/std",
+  "sp-io/std",
+  "sp-runtime/std",
+  "sp-session/std",
+  "sp-staking/std",
+  "sp-std/std",
+  "sp-trie/std",
+]
+try-runtime = [
+  "frame-support/try-runtime",
+  "frame-system/try-runtime",
+]

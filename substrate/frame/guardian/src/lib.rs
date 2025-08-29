@@ -1,0 +1,454 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+use frame_support::pallet_prelude::*;
+use frame_support::traits::OneSessionHandler;
+use frame_support::{Deserialize, Serialize};
+
+use codec::{Decode, MaxEncodedLen};
+
+use sp_runtime::{
+	traits::{AtLeast32BitUnsigned, Convert, Member, One, OpaqueKeys, Zero},
+	ConsensusEngineId, DispatchError, KeyTypeId, Permill, RuntimeAppPublic,
+};
+use sp_staking::SessionIndex;
+use sp_std::{
+	marker::PhantomData,
+	ops::{Rem, Sub},
+	prelude::*,
+};
+
+pub mod historical;
+
+pub use pallet::*;
+
+#[derive(Clone, Eq, PartialEq, Default, Debug, TypeInfo)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct RGuardianInfo {
+	pub active: u32,
+	pub maximum: u32,
+}
+
+/// Decides whether the session should be ended.
+pub trait ShouldEndSession<BlockNumber> {
+	/// Return `true` if the session should be ended.
+	fn should_end_session(now: BlockNumber) -> bool;
+}
+
+/// Ends the session after a fixed period of blocks.
+///
+/// The first session will have length of `Offset`, and
+/// the following sessions will have length of `Period`.
+/// This may prove nonsensical if `Offset` >= `Period`.
+pub struct PeriodicSessions<Period, Offset>(PhantomData<(Period, Offset)>);
+
+impl<
+		BlockNumber: Rem<Output = BlockNumber> + Sub<Output = BlockNumber> + Zero + PartialOrd,
+		Period: Get<BlockNumber>,
+		Offset: Get<BlockNumber>,
+	> ShouldEndSession<BlockNumber> for PeriodicSessions<Period, Offset>
+{
+	fn should_end_session(now: BlockNumber) -> bool {
+		let offset = Offset::get();
+		now >= offset && ((now - offset) % Period::get()).is_zero()
+	}
+}
+
+/// A trait for managing creation of new validator set.
+pub trait SessionManager<ValidatorId> {
+	/// Plan a new session, and optionally provide the new validator set.
+	///
+	/// Even if the validator-set is the same as before, if any underlying economic conditions have
+	/// changed (i.e. stake-weights), the new validator set must be returned. This is necessary for
+	/// consensus engines making use of the session pallet to issue a validator-set change so
+	/// misbehavior can be provably associated with the new economic conditions as opposed to the
+	/// old. The returned validator set, if any, will not be applied until `new_index`. `new_index`
+	/// is strictly greater than from previous call.
+	///
+	/// The first session start at index 0.
+	///
+	/// `new_session(session)` is guaranteed to be called before `end_session(session-1)`. In other
+	/// words, a new session must always be planned before an ongoing one can be finished.
+	fn new_session(new_index: SessionIndex) -> Option<Vec<ValidatorId>>;
+	/// Same as `new_session`, but it this should only be called at genesis.
+	///
+	/// The session manager might decide to treat this in a different way. Default impl is simply
+	/// using [`new_session`](Self::new_session).
+	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<ValidatorId>> {
+		Self::new_session(new_index)
+	}
+	/// End the session.
+	///
+	/// Because the session pallet can queue validator set the ending session can be lower than the
+	/// last new session index.
+	fn end_session(end_index: SessionIndex);
+	/// Start an already planned session.
+	///
+	/// The session start to be used for validation.
+	fn start_session(start_index: SessionIndex);
+}
+
+impl<A> SessionManager<A> for () {
+	fn new_session(_: SessionIndex) -> Option<Vec<A>> {
+		None
+	}
+	fn start_session(_: SessionIndex) {}
+	fn end_session(_: SessionIndex) {}
+}
+
+/// Handler for session life cycle events.
+pub trait SessionHandler<ValidatorId> {
+	/// All the key type ids this session handler can process.
+	///
+	/// The order must be the same as it expects them in
+	/// [`on_new_session`](Self::on_new_session<Ks>) and
+	/// [`on_genesis_session`](Self::on_genesis_session<Ks>).
+	const KEY_TYPE_IDS: &'static [KeyTypeId];
+
+	/// The given validator set will be used for the genesis session.
+	/// It is guaranteed that the given validator set will also be used
+	/// for the second session, therefore the first call to `on_new_session`
+	/// should provide the same validator set.
+	fn on_genesis_session<Ks: OpaqueKeys>(validators: &[(ValidatorId, Ks)]);
+
+	/// Session set has changed; act appropriately. Note that this can be called
+	/// before initialization of your pallet.
+	///
+	/// `changed` is true whenever any of the session keys or underlying economic
+	/// identities or weightings behind those keys has changed.
+	fn on_new_session<Ks: OpaqueKeys>(
+		changed: bool,
+		validators: &[(ValidatorId, Ks)],
+		queued_validators: &[(ValidatorId, Ks)],
+	);
+
+	/// A notification for end of the session.
+	///
+	/// Note it is triggered before any [`SessionManager::end_session`] handlers,
+	/// so we can still affect the validator set.
+	fn on_before_session_ending() {}
+
+	/// A validator got disabled. Act accordingly until a new session begins.
+	fn on_disabled(validator_index: u32);
+}
+
+#[impl_trait_for_tuples::impl_for_tuples(1, 30)]
+#[tuple_types_custom_trait_bound(OneSessionHandler<AId>)]
+impl<AId> SessionHandler<AId> for Tuple {
+	for_tuples!(
+		const KEY_TYPE_IDS: &'static [KeyTypeId] = &[ #( <Tuple::Key as RuntimeAppPublic>::ID ),* ];
+	);
+
+	fn on_genesis_session<Ks: OpaqueKeys>(validators: &[(AId, Ks)]) {
+		for_tuples!(
+			#(
+				let our_keys: Box<dyn Iterator<Item=_>> = Box::new(validators.iter()
+					.filter_map(|k|
+						k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
+					)
+				);
+
+				Tuple::on_genesis_session(our_keys);
+			)*
+		)
+	}
+
+	fn on_new_session<Ks: OpaqueKeys>(
+		changed: bool,
+		validators: &[(AId, Ks)],
+		queued_validators: &[(AId, Ks)],
+	) {
+		for_tuples!(
+			#(
+				let our_keys: Box<dyn Iterator<Item=_>> = Box::new(validators.iter()
+					.filter_map(|k|
+						k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
+					));
+				let queued_keys: Box<dyn Iterator<Item=_>> = Box::new(queued_validators.iter()
+					.filter_map(|k|
+						k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
+					));
+				Tuple::on_new_session(changed, our_keys, queued_keys);
+			)*
+		)
+	}
+
+	fn on_before_session_ending() {
+		for_tuples!( #( Tuple::on_before_session_ending(); )* )
+	}
+
+	fn on_disabled(i: u32) {
+		for_tuples!( #( Tuple::on_disabled(i); )* )
+	}
+}
+
+/// `SessionHandler` for tests that use `UintAuthorityId` as `Keys`.
+pub struct TestSessionHandler;
+impl<AId> SessionHandler<AId> for TestSessionHandler {
+	const KEY_TYPE_IDS: &'static [KeyTypeId] = &[sp_runtime::key_types::DUMMY];
+	fn on_genesis_session<Ks: OpaqueKeys>(_: &[(AId, Ks)]) {}
+	fn on_new_session<Ks: OpaqueKeys>(_: bool, _: &[(AId, Ks)], _: &[(AId, Ks)]) {}
+	fn on_before_session_ending() {}
+	fn on_disabled(_: u32) {}
+}
+
+#[frame_support::pallet]
+pub mod pallet {
+	use frame_support::{pallet_prelude::*, DefaultNoBound};
+	use frame_system::pallet_prelude::*;
+
+	use super::*;
+
+	/// The current storage version.
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+
+	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
+	#[pallet::without_storage_info]
+	pub struct Pallet<T>(_);
+
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		/// The overarching event type.
+		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+		/// A stable ID for a validator.
+		type ValidatorId: Member
+			+ Parameter
+			+ MaybeSerializeDeserialize
+			+ MaxEncodedLen
+			+ TryFrom<Self::AccountId>;
+
+		/// A conversion from account ID to validator ID.
+		///
+		/// Its cost must be at most one storage read.
+		type ValidatorIdOf: Convert<Self::AccountId, Option<Self::ValidatorId>>;
+
+		/// Indicator for when to end the session.
+		type ShouldEndSession: ShouldEndSession<BlockNumberFor<Self>>;
+
+		/// Handler for managing new session.
+		type SessionManager: SessionManager<Self::ValidatorId>;
+
+		/// Handler when a session has changed.
+		type SessionHandler: SessionHandler<Self::ValidatorId>;
+
+		/// The keys.
+		type Keys: OpaqueKeys + Member + Parameter + MaybeSerializeDeserialize;
+	}
+
+	#[pallet::genesis_config]
+	#[derive(DefaultNoBound)]
+	pub struct GenesisConfig<T> {
+		pub guardian_count: u32,
+		pub min_guardian_count: u32,
+		// pub min_guardian_bond: u64,
+		pub min_guardian_bond: u64,
+		pub max_guardian_count: Option<u32>,
+		phantom: PhantomData<T>,
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+		fn build(&self) {
+			GuardianCount::<T>::put(self.guardian_count);
+			MinimumGuardianCount::<T>::put(self.min_guardian_count);
+			MinGuardianBond::<T>::put(self.min_guardian_bond);
+			if let Some(val) = self.max_guardian_count {
+				MaxGuardianCount::<T>::put(val);
+			}
+		}
+	}
+
+	/// The ideal number of active guardians.
+	#[pallet::storage]
+	#[pallet::getter(fn guardian_count)]
+	pub type GuardianCount<T> = StorageValue<_, u32, ValueQuery>;
+
+	/// Minimum number of staking participants before emergency conditions are imposed.
+	#[pallet::storage]
+	#[pallet::getter(fn minimum_guardian_count)]
+	pub type MinimumGuardianCount<T> = StorageValue<_, u32, ValueQuery>;
+
+	/// The minimum active bond to become and maintain the role of a nominator.
+	#[pallet::storage]
+	pub type MinGuardianBond<T> = StorageValue<_, u64, ValueQuery>;
+
+	/// The maximum number of active guardians.
+	#[pallet::storage]
+	pub type MaxGuardianCount<T> = StorageValue<_, u32, OptionQuery>;
+
+	/// The current set of validators.
+	#[pallet::storage]
+	#[pallet::getter(fn validators)]
+	pub type Validators<T: Config> = StorageValue<_, Vec<T::ValidatorId>, ValueQuery>;
+
+	/// Current index of the session.
+	#[pallet::storage]
+	#[pallet::getter(fn current_index)]
+	pub type CurrentIndex<T> = StorageValue<_, SessionIndex, ValueQuery>;
+
+	/// True if the underlying economic identities or weighting behind the validators
+	/// has changed in the queued validator set.
+	#[pallet::storage]
+	pub type QueuedChanged<T> = StorageValue<_, bool, ValueQuery>;
+
+	/// The queued keys for the next session. When the next session begins, these keys
+	/// will be used to determine the validator's session keys.
+	#[pallet::storage]
+	#[pallet::getter(fn queued_keys)]
+	pub type QueuedKeys<T: Config> = StorageValue<_, Vec<(T::ValidatorId, T::Keys)>, ValueQuery>;
+
+	/// Indices of disabled validators.
+	///
+	/// The vec is always kept sorted so that we can find whether a given validator is
+	/// disabled using binary search. It gets cleared when `on_session_ending` returns
+	/// a new set of identities.
+	#[pallet::storage]
+	#[pallet::getter(fn disabled_validators)]
+	pub type DisabledValidators<T> = StorageValue<_, Vec<u32>, ValueQuery>;
+
+	/// The next session keys for a validator.
+	#[pallet::storage]
+	pub type NextKeys<T: Config> =
+		StorageMap<_, Twox64Concat, T::ValidatorId, T::Keys, OptionQuery>;
+
+	/// The owner of a key. The key is the `KeyTypeId` + the encoded key.
+	#[pallet::storage]
+	pub type KeyOwner<T: Config> =
+		StorageMap<_, Twox64Concat, (KeyTypeId, Vec<u8>), T::ValidatorId, OptionQuery>;
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event {
+		/// New session has happened. Note that the argument is the session index, not the
+		/// block number as the type might suggest.
+		NewSession { session_index: SessionIndex },
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {}
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		/// Ref: https://github.com/paritytech/polkadot-sdk/blob/935c7f461ae8b4e607f1db16322ea952b438650e/substrate/frame/examples/offchain-worker/src/lib.rs#L539
+		///
+		/// Note that it's not guaranteed for offchain workers to run on EVERY block, there might
+		/// be cases where some blocks are skipped, or for some the worker runs twice (re-orgs),
+		/// so the code should be able to handle that.
+		/// You can use `Local Storage` API to coordinate runs of the worker.
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			if T::ShouldEndSession::should_end_session(n) {
+				// println!("pallet_guardian ending session {:?}", 1);
+				Self::rotate_session();
+				T::BlockWeights::get().max_block
+			} else {
+				// NOTE: the non-database part of the weight for `should_end_session(n)` is
+				// included as weight for empty block, the database part is expected to be in
+				// cache.
+				// println!("pallet_guardian session not ending {:?}", 1);
+				Weight::zero()
+			}
+		}
+	}
+}
+
+impl<T: Config> Pallet<T> {
+	/// Move on to next session. Register new validator set and session keys. Changes to the
+	/// validator set have a session of delay to take effect. This allows for equivocation
+	/// punishment after a fork.
+	pub fn rotate_session() {
+		let session_index = <CurrentIndex<T>>::get();
+		log::trace!(target: "runtime::session", "rotating session {:?}", session_index);
+
+		let changed = <QueuedChanged<T>>::get();
+
+		// Inform the session handlers that a session is going to end.
+		T::SessionHandler::on_before_session_ending();
+		T::SessionManager::end_session(session_index);
+
+		// Get queued session keys and validators.
+		let session_keys = <QueuedKeys<T>>::get();
+		let validators =
+			session_keys.iter().map(|(validator, _)| validator.clone()).collect::<Vec<_>>();
+		Validators::<T>::put(&validators);
+
+		if changed {
+			// reset disabled validators
+			<DisabledValidators<T>>::take();
+		}
+
+		// Increment session index.
+		let session_index = session_index + 1;
+		<CurrentIndex<T>>::put(session_index);
+
+		T::SessionManager::start_session(session_index);
+
+		// Get next validator set.
+		let maybe_next_validators = T::SessionManager::new_session(session_index + 1);
+		let (next_validators, next_identities_changed) =
+			if let Some(validators) = maybe_next_validators {
+				// NOTE: as per the documentation on `OnSessionEnding`, we consider
+				// the validator set as having changed even if the validators are the
+				// same as before, as underlying economic conditions may have changed.
+				(validators, true)
+			} else {
+				(Validators::<T>::get(), false)
+			};
+
+		// Queue next session keys.
+		let (queued_amalgamated, next_changed) = {
+			// until we are certain there has been a change, iterate the prior
+			// validators along with the current and check for changes
+			let mut changed = next_identities_changed;
+
+			let mut now_session_keys = session_keys.iter();
+			let mut check_next_changed = |keys: &T::Keys| {
+				if changed {
+					return;
+				}
+				// since a new validator set always leads to `changed` starting
+				// as true, we can ensure that `now_session_keys` and `next_validators`
+				// have the same length. this function is called once per iteration.
+				if let Some((_, old_keys)) = now_session_keys.next() {
+					if old_keys != keys {
+						changed = true;
+					}
+				}
+			};
+			let queued_amalgamated = next_validators
+				.into_iter()
+				.filter_map(|a| {
+					let k = Self::load_keys(&a)?;
+					check_next_changed(&k);
+					Some((a, k))
+				})
+				.collect::<Vec<_>>();
+
+			(queued_amalgamated, changed)
+		};
+
+		<QueuedKeys<T>>::put(queued_amalgamated.clone());
+		<QueuedChanged<T>>::put(next_changed);
+
+		// Record that this happened.
+		Self::deposit_event(Event::NewSession { session_index });
+
+		// Tell everyone about the new session keys.
+		T::SessionHandler::on_new_session::<T::Keys>(changed, &session_keys, &queued_amalgamated);
+	}
+
+	/// Query the owner of a session key by returning the owner's validator ID.
+	pub fn key_owner(id: KeyTypeId, key_data: &[u8]) -> Option<T::ValidatorId> {
+		<KeyOwner<T>>::get((id, key_data))
+	}
+
+	pub fn populate_info() -> RGuardianInfo {
+		RGuardianInfo {
+			active: GuardianCount::<T>::get(),
+			maximum: MaxGuardianCount::<T>::get().unwrap_or(1),
+		}
+	}
+
+	fn load_keys(v: &T::ValidatorId) -> Option<T::Keys> {
+		<NextKeys<T>>::get(v)
+	}
+}

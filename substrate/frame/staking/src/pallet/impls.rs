@@ -1324,6 +1324,79 @@ impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 	}
 }
 
+/// In this implementation `new_session(session)` must be called before `end_session(session-1)`
+/// i.e. the new session must be planned before the ending of the previous session.
+///
+/// Once the first new_session is planned, all session must start and then end in order, though
+/// some session can lag in between the newest session planned and the latest session started.
+impl<T: Config> pallet_guardian::SessionManager<T::AccountId> for Pallet<T> {
+	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+		log!(trace, "planning new session {}", new_index);
+		CurrentPlannedSession::<T>::put(new_index);
+		Self::new_session(new_index, false).map(|v| v.into_inner())
+	}
+	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+		log!(trace, "planning new session {} at genesis", new_index);
+		CurrentPlannedSession::<T>::put(new_index);
+		Self::new_session(new_index, true).map(|v| v.into_inner())
+	}
+	fn start_session(start_index: SessionIndex) {
+		log!(trace, "starting session {}", start_index);
+		Self::start_session(start_index)
+	}
+	fn end_session(end_index: SessionIndex) {
+		log!(trace, "ending session {}", end_index);
+		Self::end_session(end_index)
+	}
+}
+
+impl<T: Config> pallet_guardian::historical::SessionManager<T::AccountId, Exposure<T::AccountId, BalanceOf<T>>>
+	for Pallet<T>
+{
+	fn new_session(
+		new_index: SessionIndex,
+	) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
+		<Self as pallet_guardian::SessionManager<_>>::new_session(new_index).map(|validators| {
+			let current_era = Self::current_era()
+				// Must be some as a new era has been created.
+				.unwrap_or(0);
+
+			validators
+				.into_iter()
+				.map(|v| {
+					let exposure = Self::eras_stakers(current_era, &v);
+					(v, exposure)
+				})
+				.collect()
+		})
+	}
+	fn new_session_genesis(
+		new_index: SessionIndex,
+	) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
+		<Self as pallet_guardian::SessionManager<_>>::new_session_genesis(new_index).map(
+			|validators| {
+				let current_era = Self::current_era()
+					// Must be some as a new era has been created.
+					.unwrap_or(0);
+
+				validators
+					.into_iter()
+					.map(|v| {
+						let exposure = Self::eras_stakers(current_era, &v);
+						(v, exposure)
+					})
+					.collect()
+			},
+		)
+	}
+	fn start_session(start_index: SessionIndex) {
+		<Self as pallet_guardian::SessionManager<_>>::start_session(start_index)
+	}
+	fn end_session(end_index: SessionIndex) {
+		<Self as pallet_guardian::SessionManager<_>>::end_session(end_index)
+	}
+}
+
 impl<T: Config> historical::SessionManager<T::AccountId, Exposure<T::AccountId, BalanceOf<T>>>
 	for Pallet<T>
 {

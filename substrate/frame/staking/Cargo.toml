@@ -27,6 +27,9 @@ sp-staking = { path = "../../primitives/staking", default-features = false, feat
 sp-std = { path = "../../primitives/std", default-features = false }
 frame-support = { path = "../support", default-features = false }
 frame-system = { path = "../system", default-features = false }
+pallet-guardian = { path = "../guardian", default-features = false, features = [
+	"historical",
+] }
 pallet-session = { path = "../session", default-features = false, features = [
 	"historical",
 ] }
