@@ -895,6 +895,9 @@ impl<T: Config> Pallet<T> {
 				}
 				all_voters.push(self_vote);
 				validators_taken.saturating_inc();
+			} else if Guardians::<T>::contains_key(&voter) {
+				log!(debug, "skip guardian in npos election: {:?}", voter);
+				// skip guardians.
 			} else {
 				// this can only happen if: 1. there a bug in the bags-list (or whatever is the
 				// sorted list) logic and the state of the two pallets is no longer compatible, or
