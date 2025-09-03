@@ -339,7 +339,7 @@ members = [
 	"substrate/frame/fast-unstake",
 	"substrate/frame/glutton",
 	"substrate/frame/grandpa",
-	"substrate/frame/guardian",
+	"substrate/frame/guard-session",
 	"substrate/frame/identity",
 	"substrate/frame/im-online",
 	"substrate/frame/indices",

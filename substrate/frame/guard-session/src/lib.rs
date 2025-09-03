@@ -337,14 +337,14 @@ pub mod pallet {
 		/// You can use `Local Storage` API to coordinate runs of the worker.
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			if T::ShouldEndSession::should_end_session(n) {
-				// println!("pallet_guardian ending session {:?}", 1);
+				// println!("pallet_guard-session ending session {:?}", 1);
 				Self::rotate_session();
 				T::BlockWeights::get().max_block
 			} else {
 				// NOTE: the non-database part of the weight for `should_end_session(n)` is
 				// included as weight for empty block, the database part is expected to be in
 				// cache.
-				// println!("pallet_guardian session not ending {:?}", 1);
+				// println!("pallet_guard-session session not ending {:?}", 1);
 				Weight::zero()
 			}
 		}

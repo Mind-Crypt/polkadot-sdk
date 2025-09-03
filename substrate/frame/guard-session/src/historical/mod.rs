@@ -49,7 +49,7 @@ use frame_support::{
 	Parameter,
 };
 
-use crate::{self as pallet_guardian, Pallet as Guardian};
+use crate::{self as pallet_guard_session, Pallet as Guardian};
 
 pub use pallet::*;
 
@@ -67,7 +67,7 @@ pub mod pallet {
 
 	/// Config necessary for the historical pallet.
 	#[pallet::config]
-	pub trait Config: pallet_guardian::Config + frame_system::Config {
+	pub trait Config: pallet_guard_session::Config + frame_system::Config {
 		/// Full identification of the validator.
 		type FullIdentification: Parameter;
 
@@ -141,7 +141,7 @@ impl<T: Config> ValidatorSetWithIdentification<T::AccountId> for Pallet<T> {
 /// Specialization of the crate-level `SessionManager` which returns the set of full identification
 /// when creating a new session.
 pub trait SessionManager<ValidatorId, FullIdentification>:
-	pallet_guardian::SessionManager<ValidatorId>
+	pallet_guard_session::SessionManager<ValidatorId>
 {
 	/// If there was a validator set change, its returns the set of new validators along with their
 	/// full identifications.
@@ -194,7 +194,7 @@ impl<T: Config, I: SessionManager<T::ValidatorId, T::FullIdentification>> NoteHi
 	}
 }
 
-impl<T: Config, I> pallet_guardian::SessionManager<T::ValidatorId> for NoteHistoricalRoot<T, I>
+impl<T: Config, I> pallet_guard_session::SessionManager<T::ValidatorId> for NoteHistoricalRoot<T, I>
 where
 	I: SessionManager<T::ValidatorId, T::FullIdentification>,
 {
@@ -218,7 +218,7 @@ where
 
 /// A tuple of the validator's ID and their full identification.
 pub type IdentificationTuple<T> =
-	(<T as pallet_guardian::Config>::ValidatorId, <T as Config>::FullIdentification);
+	(<T as pallet_guard_session::Config>::ValidatorId, <T as Config>::FullIdentification);
 
 /// A trie instance for checking and generating proofs.
 pub struct ProvingTrie<T: Config> {
@@ -396,7 +396,7 @@ pub(crate) mod tests {
 				frame_system::Pallet::<Test>::inc_providers(k);
 			}
 		});
-		pallet_guardian::GenesisConfig::<Test> { keys }
+		pallet_guard_session::GenesisConfig::<Test> { keys }
 			.assimilate_storage(&mut t)
 			.unwrap();
 		sp_io::TestExternalities::new(t)

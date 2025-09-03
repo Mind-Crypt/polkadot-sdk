@@ -1,10 +1,10 @@
 [package]
 authors = ["MindCrypt Project <info@mindcrypt.com>"]
-description = "Guardian Network"
+description = "Guardian Session"
 edition = "2021"
 homepage = "https://mindcrypt.com"
 license = "Apache-2.0"
-name = "pallet-guardian"
+name = "pallet-guard-session"
 repository = "https://github.com/Mind-Crypt/polkadot-sdk"
 version = "0.0.1"
 

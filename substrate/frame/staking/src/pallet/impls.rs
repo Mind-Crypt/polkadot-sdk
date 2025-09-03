@@ -1332,7 +1332,7 @@ impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 ///
 /// Once the first new_session is planned, all session must start and then end in order, though
 /// some session can lag in between the newest session planned and the latest session started.
-impl<T: Config> pallet_guardian::SessionManager<T::AccountId> for Pallet<T> {
+impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T> {
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
 		log!(trace, "planning new session {}", new_index);
 		CurrentPlannedSession::<T>::put(new_index);
@@ -1353,13 +1353,13 @@ impl<T: Config> pallet_guardian::SessionManager<T::AccountId> for Pallet<T> {
 	}
 }
 
-impl<T: Config> pallet_guardian::historical::SessionManager<T::AccountId, Exposure<T::AccountId, BalanceOf<T>>>
+impl<T: Config> pallet_guard_session::historical::SessionManager<T::AccountId, Exposure<T::AccountId, BalanceOf<T>>>
 	for Pallet<T>
 {
 	fn new_session(
 		new_index: SessionIndex,
 	) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
-		<Self as pallet_guardian::SessionManager<_>>::new_session(new_index).map(|validators| {
+		<Self as pallet_guard_session::SessionManager<_>>::new_session(new_index).map(|validators| {
 			let current_era = Self::current_era()
 				// Must be some as a new era has been created.
 				.unwrap_or(0);
@@ -1376,7 +1376,7 @@ impl<T: Config> pallet_guardian::historical::SessionManager<T::AccountId, Exposu
 	fn new_session_genesis(
 		new_index: SessionIndex,
 	) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
-		<Self as pallet_guardian::SessionManager<_>>::new_session_genesis(new_index).map(
+		<Self as pallet_guard_session::SessionManager<_>>::new_session_genesis(new_index).map(
 			|validators| {
 				let current_era = Self::current_era()
 					// Must be some as a new era has been created.
@@ -1393,10 +1393,10 @@ impl<T: Config> pallet_guardian::historical::SessionManager<T::AccountId, Exposu
 		)
 	}
 	fn start_session(start_index: SessionIndex) {
-		<Self as pallet_guardian::SessionManager<_>>::start_session(start_index)
+		<Self as pallet_guard_session::SessionManager<_>>::start_session(start_index)
 	}
 	fn end_session(end_index: SessionIndex) {
-		<Self as pallet_guardian::SessionManager<_>>::end_session(end_index)
+		<Self as pallet_guard_session::SessionManager<_>>::end_session(end_index)
 	}
 }
 

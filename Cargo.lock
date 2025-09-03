@@ -9981,7 +9981,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-guardian"
+name = "pallet-guard-session"
 version = "0.0.1"
 dependencies = [
  "frame-benchmarking",
@@ -10767,7 +10767,7 @@ dependencies = [
  "pallet-authorship",
  "pallet-bags-list",
  "pallet-balances",
- "pallet-guardian",
+ "pallet-guard-session",
  "pallet-session",
  "pallet-staking-reward-curve",
  "pallet-timestamp",
