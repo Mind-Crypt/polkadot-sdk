@@ -18,9 +18,9 @@
 //! Off-chain logic for creating a proof based data provided by on-chain logic.
 //!
 //! Validator-set extracting an iterator from an off-chain worker stored list containing historical
-//! validator-sets. Based on the logic of historical slashing, but the validation is done off-chain.
+//! guardian-sets. Based on the logic of historical slashing, but the validation is done off-chain.
 //! Use [`fn store_current_session_validator_set_to_offchain()`](super::onchain) to store the
-//! required data to the offchain validator set. This is used in conjunction with [`ProvingTrie`]
+//! required data to the offchain guardian set. This is used in conjunction with [`ProvingTrie`]
 //! and the off-chain indexing API.
 
 use sp_runtime::{
@@ -33,38 +33,38 @@ use sp_std::prelude::*;
 use super::{shared, Config, IdentificationTuple, ProvingTrie};
 use crate::{Pallet as GuardianModule, SessionIndex};
 
-/// A set of validators, which was used for a fixed session index.
-struct ValidatorSet<T: Config> {
-	validator_set: Vec<IdentificationTuple<T>>,
+/// A set of guardians, which was used for a fixed session index.
+struct GuardianSet<T: Config> {
+	guardian_set: Vec<IdentificationTuple<T>>,
 }
 
-impl<T: Config> ValidatorSet<T> {
-	/// Load the set of validators for a particular session index from the off-chain storage.
+impl<T: Config> GuardianSet<T> {
+	/// Load the set of guardians for a particular session index from the off-chain storage.
 	///
 	/// If none is found or decodable given `prefix` and `session`, it will return `None`.
-	/// Empty validator sets should only ever exist for genesis blocks.
+	/// Empty guardian sets should only ever exist for genesis blocks.
 	pub fn load_from_offchain_db(session_index: SessionIndex) -> Option<Self> {
 		let derived_key = shared::derive_key(shared::PREFIX, session_index);
 		StorageValueRef::persistent(derived_key.as_ref())
-			.get::<Vec<(T::ValidatorId, T::FullIdentification)>>()
+			.get::<Vec<(T::GuardianId, T::FullIdentification)>>()
 			.ok()
 			.flatten()
-			.map(|validator_set| Self { validator_set })
+			.map(|guardian_set| Self { guardian_set })
 	}
 
 	#[inline]
 	fn len(&self) -> usize {
-		self.validator_set.len()
+		self.guardian_set.len()
 	}
 }
 
 /// Implement conversion into iterator for usage
 /// with [ProvingTrie](super::ProvingTrie::generate_for).
-impl<T: Config> sp_std::iter::IntoIterator for ValidatorSet<T> {
-	type Item = (T::ValidatorId, T::FullIdentification);
+impl<T: Config> sp_std::iter::IntoIterator for GuardianSet<T> {
+	type Item = (T::GuardianId, T::FullIdentification);
 	type IntoIter = sp_std::vec::IntoIter<Self::Item>;
 	fn into_iter(self) -> Self::IntoIter {
-		self.validator_set.into_iter()
+		self.guardian_set.into_iter()
 	}
 }
 
@@ -77,9 +77,9 @@ pub fn prove_session_membership<T: Config, D: AsRef<[u8]>>(
 	session_index: SessionIndex,
 	session_key: (KeyTypeId, D),
 ) -> Option<MembershipProof> {
-	let validators = ValidatorSet::<T>::load_from_offchain_db(session_index)?;
-	let count = validators.len() as u32;
-	let trie = ProvingTrie::<T>::generate_for(validators.into_iter()).ok()?;
+	let guardians = GuardianSet::<T>::load_from_offchain_db(session_index)?;
+	let count = guardians.len() as u32;
+	let trie = ProvingTrie::<T>::generate_for(guardians.into_iter()).ok()?;
 
 	let (id, data) = session_key;
 	trie.prove(id, data.as_ref()).map(|trie_nodes| MembershipProof {
@@ -195,7 +195,7 @@ mod tests {
 		use codec::{Decode, Encode};
 
 		let sample = (
-			22u32 as <Test as SessionConfig>::ValidatorId,
+			22u32 as <Test as SessionConfig>::GuardianId,
 			7_777_777 as <Test as HistoricalConfig>::FullIdentification,
 		);
 

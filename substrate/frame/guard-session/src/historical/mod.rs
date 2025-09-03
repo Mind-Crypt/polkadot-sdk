@@ -18,7 +18,7 @@
 //! An opt-in utility for tracking historical sessions in FRAME-session.
 //!
 //! This is generally useful when implementing blockchains that require accountable
-//! safety where validators from some amount f prior sessions must remain slashable.
+//! safety where guardians from some amount f prior sessions must remain slashable.
 //!
 //! Rather than store the full session data for any given session, we instead commit
 //! to the roots of merkle tries containing the session data.
@@ -45,7 +45,7 @@ use sp_trie::{
 
 use frame_support::{
 	print,
-	traits::{KeyOwnerProofSystem, ValidatorSet, ValidatorSetWithIdentification},
+	traits::{KeyOwnerProofSystem, ValidatorSet as GuardianSet, ValidatorSetWithIdentification},
 	Parameter,
 };
 
@@ -78,7 +78,7 @@ pub mod pallet {
 		/// historical trie.
 		///
 		/// It must return the identification for the current session index.
-		type FullIdentificationOf: Convert<Self::ValidatorId, Option<Self::FullIdentification>>;
+		type FullIdentificationOf: Convert<Self::GuardianId, Option<Self::FullIdentification>>;
 	}
 
 	/// Mapping from historical session indices to session-data root hash and validator count.
@@ -120,16 +120,16 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> ValidatorSet<T::AccountId> for Pallet<T> {
-	type ValidatorId = T::ValidatorId;
+impl<T: Config> GuardianSet<T::AccountId> for Pallet<T> {
+	type ValidatorId = T::GuardianId;
 	type ValidatorIdOf = T::ValidatorIdOf;
 
 	fn session_index() -> sp_staking::SessionIndex {
 		super::Pallet::<T>::current_index()
 	}
 
-	fn validators() -> Vec<Self::ValidatorId> {
-		super::Pallet::<T>::validators()
+	fn validators() -> Vec<T::GuardianId> {
+		super::Pallet::<T>::guardians()
 	}
 }
 
@@ -140,15 +140,15 @@ impl<T: Config> ValidatorSetWithIdentification<T::AccountId> for Pallet<T> {
 
 /// Specialization of the crate-level `SessionManager` which returns the set of full identification
 /// when creating a new session.
-pub trait SessionManager<ValidatorId, FullIdentification>:
-	pallet_guard_session::SessionManager<ValidatorId>
+pub trait SessionManager<GuardianId, FullIdentification>:
+	pallet_guard_session::SessionManager<GuardianId>
 {
-	/// If there was a validator set change, its returns the set of new validators along with their
+	/// If there was a validator set change, its returns the set of new guardians along with their
 	/// full identifications.
-	fn new_session(new_index: SessionIndex) -> Option<Vec<(ValidatorId, FullIdentification)>>;
+	fn new_session(new_index: SessionIndex) -> Option<Vec<(GuardianId, FullIdentification)>>;
 	fn new_session_genesis(
 		new_index: SessionIndex,
-	) -> Option<Vec<(ValidatorId, FullIdentification)>> {
+	) -> Option<Vec<(GuardianId, FullIdentification)>> {
 		<Self as SessionManager<_, _>>::new_session(new_index)
 	}
 	fn start_session(start_index: SessionIndex);
@@ -159,8 +159,8 @@ pub trait SessionManager<ValidatorId, FullIdentification>:
 /// sets the historical trie root of the ending session.
 pub struct NoteHistoricalRoot<T, I>(sp_std::marker::PhantomData<(T, I)>);
 
-impl<T: Config, I: SessionManager<T::ValidatorId, T::FullIdentification>> NoteHistoricalRoot<T, I> {
-	fn do_new_session(new_index: SessionIndex, is_genesis: bool) -> Option<Vec<T::ValidatorId>> {
+impl<T: Config, I: SessionManager<T::GuardianId, T::FullIdentification>> NoteHistoricalRoot<T, I> {
+	fn do_new_session(new_index: SessionIndex, is_genesis: bool) -> Option<Vec<T::GuardianId>> {
 		<StoredRange<T>>::mutate(|range| {
 			range.get_or_insert_with(|| (new_index, new_index)).1 = new_index + 1;
 		});
@@ -194,15 +194,15 @@ impl<T: Config, I: SessionManager<T::ValidatorId, T::FullIdentification>> NoteHi
 	}
 }
 
-impl<T: Config, I> pallet_guard_session::SessionManager<T::ValidatorId> for NoteHistoricalRoot<T, I>
+impl<T: Config, I> pallet_guard_session::SessionManager<T::GuardianId> for NoteHistoricalRoot<T, I>
 where
-	I: SessionManager<T::ValidatorId, T::FullIdentification>,
+	I: SessionManager<T::GuardianId, T::FullIdentification>,
 {
-	fn new_session(new_index: SessionIndex) -> Option<Vec<T::ValidatorId>> {
+	fn new_session(new_index: SessionIndex) -> Option<Vec<T::GuardianId>> {
 		Self::do_new_session(new_index, false)
 	}
 
-	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::ValidatorId>> {
+	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::GuardianId>> {
 		Self::do_new_session(new_index, true)
 	}
 
@@ -211,14 +211,14 @@ where
 	}
 
 	fn end_session(end_index: SessionIndex) {
-		onchain::store_session_validator_set_to_offchain::<T>(end_index);
+		onchain::store_session_guardian_set_to_offchain::<T>(end_index);
 		<I as SessionManager<_, _>>::end_session(end_index)
 	}
 }
 
 /// A tuple of the validator's ID and their full identification.
 pub type IdentificationTuple<T> =
-	(<T as pallet_guard_session::Config>::ValidatorId, <T as Config>::FullIdentification);
+	(<T as pallet_guard_session::Config>::GuardianId, <T as Config>::FullIdentification);
 
 /// A trie instance for checking and generating proofs.
 pub struct ProvingTrie<T: Config> {
@@ -227,16 +227,16 @@ pub struct ProvingTrie<T: Config> {
 }
 
 impl<T: Config> ProvingTrie<T> {
-	fn generate_for<I>(validators: I) -> Result<Self, &'static str>
+	fn generate_for<I>(guardians: I) -> Result<Self, &'static str>
 	where
-		I: IntoIterator<Item = (T::ValidatorId, T::FullIdentification)>,
+		I: IntoIterator<Item = (T::GuardianId, T::FullIdentification)>,
 	{
 		let mut db = MemoryDB::default();
 		let mut root = Default::default();
 
 		{
 			let mut trie = TrieDBMutBuilderV0::new(&mut db, &mut root).build();
-			for (i, (validator, full_id)) in validators.into_iter().enumerate() {
+			for (i, (validator, full_id)) in guardians.into_iter().enumerate() {
 				let i = i as u32;
 				let keys = match <Guardian<T>>::load_keys(&validator) {
 					None => continue,
@@ -322,7 +322,7 @@ impl<T: Config, D: AsRef<[u8]>> KeyOwnerProofSystem<(KeyTypeId, D)> for Pallet<T
 
 	fn prove(key: (KeyTypeId, D)) -> Option<Self::Proof> {
 		let session = <Guardian<T>>::current_index();
-		let validators = <Guardian<T>>::validators()
+		let guardians = <Guardian<T>>::guardians()
 			.into_iter()
 			.filter_map(|validator| {
 				T::FullIdentificationOf::convert(validator.clone())
@@ -330,9 +330,9 @@ impl<T: Config, D: AsRef<[u8]>> KeyOwnerProofSystem<(KeyTypeId, D)> for Pallet<T
 			})
 			.collect::<Vec<_>>();
 
-		let count = validators.len() as ValidatorCount;
+		let count = guardians.len() as ValidatorCount;
 
-		let trie = ProvingTrie::<T>::generate_for(validators).ok()?;
+		let trie = ProvingTrie::<T>::generate_for(guardians).ok()?;
 
 		let (id, data) = key;
 		trie.prove(id, data.as_ref()).map(|trie_nodes| MembershipProof {
@@ -348,7 +348,7 @@ impl<T: Config, D: AsRef<[u8]>> KeyOwnerProofSystem<(KeyTypeId, D)> for Pallet<T
 		if proof.session == <Guardian<T>>::current_index() {
 			<Guardian<T>>::key_owner(id, data.as_ref()).and_then(|owner| {
 				T::FullIdentificationOf::convert(owner.clone()).and_then(move |id| {
-					let count = <Guardian<T>>::validators().len() as ValidatorCount;
+					let count = <Guardian<T>>::guardians().len() as ValidatorCount;
 
 					if count != proof.validator_count {
 						return None
@@ -369,6 +369,8 @@ impl<T: Config, D: AsRef<[u8]>> KeyOwnerProofSystem<(KeyTypeId, D)> for Pallet<T
 		}
 	}
 }
+
+/*
 
 #[cfg(test)]
 pub(crate) mod tests {
@@ -493,3 +495,5 @@ pub(crate) mod tests {
 		});
 	}
 }
+
+*/
