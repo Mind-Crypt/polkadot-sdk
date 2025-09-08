@@ -1,9 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 use frame_support::pallet_prelude::*;
 use frame_support::traits::OneSessionHandler;
-use frame_support::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
-use codec::{Decode, MaxEncodedLen};
+use codec::{Encode, Decode, MaxEncodedLen};
 
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, Convert, Member, One, OpaqueKeys, Zero},
@@ -20,7 +21,7 @@ pub mod historical;
 
 pub use pallet::*;
 
-#[derive(Clone, Eq, PartialEq, Default, Debug, TypeInfo)]
+#[derive(Clone, Eq, PartialEq, Default, Debug, TypeInfo, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RGuardianInfo {
 	pub active: u32,
