@@ -364,13 +364,18 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type MinGuardianBond<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+	/// Minimum number of staking participants before emergency conditions are imposed.
+	#[pallet::storage]
+	#[pallet::getter(fn minimum_guardian_count)]
+	pub type MinimumGuardianCount<T> = StorageValue<_, u32, ValueQuery>;
+
 	/// The maximum guardian count before we stop allowing new guardians to join.
 	///
 	/// When this value is not set, no limits are enforced.
 	#[pallet::storage]
 	pub type MaxGuardiansCount<T> = StorageValue<_, u32, OptionQuery>;
 
-	/// The map from (wannabe) validator stash key to the preferences of that validator.
+	/// The map from (wannabe) guardian stash key to the preferences of that validator.
 	///
 	/// TWOX-NOTE: SAFE since `AccountId` is a secure hash.
 	#[pallet::storage]
@@ -685,6 +690,10 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
+		pub guardian_count: u32,
+		pub minimum_guardian_count: u32,
+		pub min_guardian_bond: BalanceOf<T>,
+		pub max_guardian_count: Option<u32>,
 		pub validator_count: u32,
 		pub minimum_validator_count: u32,
 		pub invulnerables: Vec<T::AccountId>,
@@ -702,6 +711,9 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
+			GuardianCount::<T>::put(self.guardian_count);
+			MinimumGuardianCount::<T>::put(self.minimum_guardian_count);
+			MinGuardianBond::<T>::put(self.min_guardian_bond);
 			ValidatorCount::<T>::put(self.validator_count);
 			MinimumValidatorCount::<T>::put(self.minimum_validator_count);
 			Invulnerables::<T>::put(&self.invulnerables);
@@ -715,6 +727,9 @@ pub mod pallet {
 			}
 			if let Some(x) = self.max_nominator_count {
 				MaxNominatorsCount::<T>::put(x);
+			}
+			if let Some(x) = self.max_guardian_count {
+				MaxGuardiansCount::<T>::put(x);
 			}
 
 			for &(ref stash, _, balance, ref status) in &self.stakers {
