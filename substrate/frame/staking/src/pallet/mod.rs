@@ -2032,11 +2032,11 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::guard())]
 		pub fn guard(origin: OriginFor<T>, prefs: GuardianPrefs) -> DispatchResult {
 			let controller = ensure_signed(origin)?;
-
 			let ledger = Self::ledger(Controller(controller))?;
 
 			ensure!(ledger.active >= MinGuardianBond::<T>::get(), Error::<T>::InsufficientBond);
 			let stash = &ledger.stash;
+			log::warn!("Call::guard called by: {:?}", stash);
 
 			// ensure their commission is correct.
 			ensure!(prefs.commission >= MinCommission::<T>::get(), Error::<T>::CommissionTooLow);

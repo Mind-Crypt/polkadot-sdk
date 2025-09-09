@@ -199,10 +199,20 @@ where
 	I: SessionManager<T::ValidatorId, T::FullIdentification>,
 {
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::ValidatorId>> {
+		log::warn!(
+			"new_session called at {}:{}",
+			file!(),
+			line!()
+		);
 		Self::do_new_session(new_index, false)
 	}
 
 	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::ValidatorId>> {
+		log::warn!(
+			"new_session_genesis called at {}:{}",
+			file!(),
+			line!()
+		);
 		Self::do_new_session(new_index, true)
 	}
 

@@ -199,10 +199,20 @@ where
 	I: SessionManager<T::GuardianId, T::FullIdentification>,
 {
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::GuardianId>> {
+		log::warn!(
+			"new_session called at {}:{}",
+			file!(),
+			line!()
+		);
 		Self::do_new_session(new_index, false)
 	}
 
 	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::GuardianId>> {
+		log::warn!(
+			"new_session_genesis called at {}:{}",
+			file!(),
+			line!()
+		);
 		Self::do_new_session(new_index, true)
 	}
 
