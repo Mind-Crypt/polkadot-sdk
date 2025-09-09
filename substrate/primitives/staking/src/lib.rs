@@ -68,6 +68,8 @@ pub enum StakerStatus<AccountId> {
 	Validator,
 	/// Declaring desire to nominate, delegate, or generally approve of the given set of others.
 	Nominator(Vec<AccountId>),
+	/// Declaring desire in guard, i.e. security council members.
+	Guardian,
 }
 
 /// A struct that reflects stake that an account has in the staking system. Provides a set of
@@ -183,6 +185,9 @@ pub trait StakingInterface {
 	/// The minimum amount required to bond in order to set validation intentions.
 	fn minimum_validator_bond() -> Self::Balance;
 
+	/// The minimum amount required to bond in order to set guardian intentions.
+	fn minimum_guardian_bond() -> Self::Balance;
+
 	/// Return a stash account that is controlled by a `controller`.
 	///
 	/// ## Note
@@ -259,6 +264,9 @@ pub trait StakingInterface {
 	/// The ideal number of active validators.
 	fn desired_validator_count() -> u32;
 
+	/// The ideal number of active guardians.
+	fn desired_guardian_count() -> u32;
+
 	/// Whether or not there is an ongoing election.
 	fn election_ongoing() -> bool;
 
@@ -274,6 +282,11 @@ pub trait StakingInterface {
 	/// Checks whether or not this is a validator account.
 	fn is_validator(who: &Self::AccountId) -> bool {
 		Self::status(who).map(|s| matches!(s, StakerStatus::Validator)).unwrap_or(false)
+	}
+
+	/// Checks whether or not this is a validator account.
+	fn is_guardian(who: &Self::AccountId) -> bool {
+		Self::status(who).map(|s| matches!(s, StakerStatus::Guardian)).unwrap_or(false)
 	}
 
 	/// Get the nominations of a stash, if they are a nominator, `None` otherwise.

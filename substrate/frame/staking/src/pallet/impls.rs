@@ -831,6 +831,7 @@ impl<T: Config> Pallet<T> {
 		let weight_of = Self::weight_of_fn();
 
 		let mut voters_seen = 0u32;
+		let mut guardians_taken = 0u32;
 		let mut validators_taken = 0u32;
 		let mut nominators_taken = 0u32;
 		let mut min_active_stake = u64::MAX;
@@ -897,7 +898,16 @@ impl<T: Config> Pallet<T> {
 				validators_taken.saturating_inc();
 			} else if Guardians::<T>::contains_key(&voter) {
 				log!(debug, "skip guardian in npos election: {:?}", voter);
-				// skip guardians.
+				let self_vote = (
+					voter.clone(),
+					voter_weight,
+					vec![voter.clone()]
+						.try_into()
+						.expect("`MaxVotesPerVoter` must be greater than or equal to 1"),
+				);
+
+				all_voters.push(self_vote);
+				guardians_taken.saturating_inc();
 			} else {
 				// this can only happen if: 1. there a bug in the bags-list (or whatever is the
 				// sorted list) logic and the state of the two pallets is no longer compatible, or
@@ -923,9 +933,10 @@ impl<T: Config> Pallet<T> {
 
 		log!(
 			info,
-			"generated {} npos voters, {} from validators and {} nominators",
+			"generated {} npos voters, {} from validators, {} from guardians and {} nominators",
 			all_voters.len(),
 			validators_taken,
+			guardians_taken,
 			nominators_taken
 		);
 
@@ -1793,6 +1804,10 @@ impl<T: Config> StakingInterface for Pallet<T> {
 		MinValidatorBond::<T>::get()
 	}
 
+	fn minimum_guardian_bond() -> Self::Balance {
+		MinGuardianBond::<T>::get()
+	}
+
 	fn stash_by_ctrl(controller: &Self::AccountId) -> Result<Self::AccountId, DispatchError> {
 		Self::ledger(Controller(controller.clone()))
 			.map(|l| l.stash)
@@ -1863,6 +1878,10 @@ impl<T: Config> StakingInterface for Pallet<T> {
 		ValidatorCount::<T>::get()
 	}
 
+	fn desired_guardian_count() -> u32 {
+		GuardianCount::<T>::get()
+	}
+
 	fn election_ongoing() -> bool {
 		T::ElectionProvider::ongoing()
 	}
@@ -1891,18 +1910,20 @@ impl<T: Config> StakingInterface for Pallet<T> {
 			return Err(Error::<T>::NotStash.into())
 		}
 
+		let is_guardian = Guardians::<T>::contains_key(&who);
 		let is_validator = Validators::<T>::contains_key(&who);
 		let is_nominator = Nominators::<T>::get(&who);
 
 		use sp_staking::StakerStatus;
-		match (is_validator, is_nominator.is_some()) {
-			(false, false) => Ok(StakerStatus::Idle),
-			(true, false) => Ok(StakerStatus::Validator),
-			(false, true) => Ok(StakerStatus::Nominator(
+		match (is_guardian, is_validator, is_nominator.is_some()) {
+			(false, false, false) => Ok(StakerStatus::Idle),
+			(true, false, false) => Ok(StakerStatus::Guardian),
+			(false, true, false) => Ok(StakerStatus::Validator),
+			(false, false, true) => Ok(StakerStatus::Nominator(
 				is_nominator.expect("is checked above; qed").targets.into_inner(),
 			)),
-			(true, true) => {
-				defensive!("cannot be both validators and nominator");
+			_ => {
+				defensive!("cannot be serving multiple roles of guardian, validator or nominator");
 				Err(Error::<T>::BadState.into())
 			},
 		}

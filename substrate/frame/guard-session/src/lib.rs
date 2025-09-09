@@ -118,7 +118,7 @@ pub trait SessionHandler<GuardianId> {
 	fn on_new_session<Ks: OpaqueKeys>(
 		changed: bool,
 		guardians: &[(GuardianId, Ks)],
-		queued_validators: &[(GuardianId, Ks)],
+		queued_guardians: &[(GuardianId, Ks)],
 	);
 
 	/// A notification for end of the session.
@@ -128,7 +128,7 @@ pub trait SessionHandler<GuardianId> {
 	fn on_before_session_ending() {}
 
 	/// A guardian got disabled. Act accordingly until a new session begins.
-	fn on_disabled(validator_index: u32);
+	fn on_disabled(guardian_index: u32);
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(1, 30)]
@@ -155,7 +155,7 @@ impl<AId> SessionHandler<AId> for Tuple {
 	fn on_new_session<Ks: OpaqueKeys>(
 		changed: bool,
 		guardians: &[(AId, Ks)],
-		queued_validators: &[(AId, Ks)],
+		queued_guardians: &[(AId, Ks)],
 	) {
 		for_tuples!(
 			#(
@@ -163,7 +163,7 @@ impl<AId> SessionHandler<AId> for Tuple {
 					.filter_map(|k|
 						k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
 					));
-				let queued_keys: Box<dyn Iterator<Item=_>> = Box::new(queued_validators.iter()
+				let queued_keys: Box<dyn Iterator<Item=_>> = Box::new(queued_guardians.iter()
 					.filter_map(|k|
 						k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
 					));
@@ -193,7 +193,8 @@ impl<AId> SessionHandler<AId> for TestSessionHandler {
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{pallet_prelude::*, DefaultNoBound};
+	use super::*;
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
 	use super::*;
@@ -237,23 +238,81 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_config]
-	#[derive(DefaultNoBound)]
-	pub struct GenesisConfig<T> {
-		pub guardian_count: u32,
-		pub min_guardian_count: u32,
-		// pub min_guardian_bond: u64,
-		pub min_guardian_bond: u64,
-		pub max_guardian_count: Option<u32>,
-		phantom: PhantomData<T>,
+	#[derive(frame_support::DefaultNoBound)]
+	pub struct GenesisConfig<T: Config> {
+		pub keys: Vec<(T::AccountId, T::GuardianId, T::Keys)>,
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
-			log::warn!(
-				target: "pallet::guard_session",
-				"pallet-guard-session: using genesis config to set guardian counts"
+			if T::SessionHandler::KEY_TYPE_IDS.len() != T::Keys::key_ids().len() {
+				panic!("Number of keys in session handler and session keys does not match");
+			}
+
+			T::SessionHandler::KEY_TYPE_IDS
+				.iter()
+				.zip(T::Keys::key_ids())
+				.enumerate()
+				.for_each(|(i, (sk, kk))| {
+					if sk != kk {
+						panic!(
+							"Session handler and session key expect different key type at index: {}",
+							i,
+						);
+					}
+				});
+
+			for (account, val, keys) in self.keys.iter().cloned() {
+				<Pallet<T>>::inner_set_keys(&val, keys)
+					.expect("genesis config must not contain duplicates; qed");
+				if frame_system::Pallet::<T>::inc_consumers_without_limit(&account).is_err() {
+					// This will leak a provider reference, however it only happens once (at
+					// genesis) so it's really not a big deal and we assume that the user wants to
+					// do this since it's the only way a non-endowed account can contain a session
+					// key.
+					frame_system::Pallet::<T>::inc_providers(&account);
+				}
+			}
+
+			let initial_guardians_0 =
+				T::SessionManager::new_session_genesis(0).unwrap_or_else(|| {
+					frame_support::print(
+						"No initial guardian provided by `SessionManager`, use \
+						session config keys to generate initial guardian set.",
+					);
+					self.keys.iter().map(|x| x.1.clone()).collect()
+				});
+			assert!(
+				!initial_guardians_0.is_empty(),
+				"Empty guardian set for session 0 in genesis block!"
 			);
+
+			let initial_guardians_1 = T::SessionManager::new_session_genesis(1)
+				.unwrap_or_else(|| initial_guardians_0.clone());
+			assert!(
+				!initial_guardians_1.is_empty(),
+				"Empty guardian set for session 1 in genesis block!"
+			);
+
+			let queued_keys: Vec<_> = initial_guardians_1
+				.iter()
+				.cloned()
+				.map(|v| {
+					(
+						v.clone(),
+						Pallet::<T>::load_keys(&v).expect("Guardian in session 1 missing keys!"),
+					)
+				})
+				.collect();
+
+			// Tell everyone about the genesis session keys
+			T::SessionHandler::on_genesis_session::<T::Keys>(&queued_keys);
+
+			Guardians::<T>::put(initial_guardians_0);
+			<QueuedKeys<T>>::put(queued_keys);
+
+			T::SessionManager::start_session(0);
 		}
 	}
 
@@ -306,7 +365,18 @@ pub mod pallet {
 	}
 
 	#[pallet::error]
-	pub enum Error<T> {}
+	pub enum Error<T> {
+		/// Invalid ownership proof.
+		InvalidProof,
+		/// No associated guardian ID for account.
+		NoAssociatedValidatorId,
+		/// Registered duplicate key.
+		DuplicatedKey,
+		/// No keys are associated with this account.
+		NoKeys,
+		/// Key setting account is not live, so it's impossible to associate keys.
+		NoAccount,
+	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -333,12 +403,64 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+	/// Perform the set_key operation, checking for duplicates. Does not set `Changed`.
+	///
+	/// The old keys for this guardian are returned, or `None` if there were none.
+	///
+	/// This does not ensure that the reference counter in system is incremented appropriately, it
+	/// must be done by the caller or the keys will be leaked in storage.
+	fn inner_set_keys(
+		who: &T::GuardianId,
+		keys: T::Keys,
+	) -> Result<Option<T::Keys>, DispatchError> {
+		let old_keys = Self::load_keys(who);
+
+		for id in T::Keys::key_ids() {
+			let key = keys.get_raw(*id);
+
+			// ensure keys are without duplication.
+			ensure!(
+				Self::key_owner(*id, key).map_or(true, |owner| &owner == who),
+				Error::<T>::DuplicatedKey,
+			);
+		}
+
+		for id in T::Keys::key_ids() {
+			let key = keys.get_raw(*id);
+
+			if let Some(old) = old_keys.as_ref().map(|k| k.get_raw(*id)) {
+				if key == old {
+					continue
+				}
+
+				Self::clear_key_owner(*id, old);
+			}
+
+			Self::put_key_owner(*id, key, who);
+		}
+
+		Self::put_keys(who, &keys);
+		Ok(old_keys)
+	}
+
+	fn load_keys(v: &T::GuardianId) -> Option<T::Keys> {
+		<NextKeys<T>>::get(v)
+	}
+
+	fn take_keys(v: &T::GuardianId) -> Option<T::Keys> {
+		<NextKeys<T>>::take(v)
+	}
+
+	fn put_keys(v: &T::GuardianId, keys: &T::Keys) {
+		<NextKeys<T>>::insert(v, keys);
+	}
+
 	/// Move on to next session. Register new guardian set and session keys. Changes to the
 	/// guardian set have a session of delay to take effect. This allows for equivocation
 	/// punishment after a fork.
 	pub fn rotate_session() {
 		let session_index = <CurrentIndex<T>>::get();
-		log::trace!(target: "runtime::session", "rotating session {:?}", session_index);
+		log::trace!(target: "runtime::guard_session", "rotating session {:?}", session_index);
 
 		let changed = <QueuedChanged<T>>::get();
 
@@ -364,9 +486,9 @@ impl<T: Config> Pallet<T> {
 		T::SessionManager::start_session(session_index);
 
 		// Get next guardian set.
-		let maybe_next_validators = T::SessionManager::new_session(session_index + 1);
-		let (next_validators, next_identities_changed) =
-			if let Some(guardians) = maybe_next_validators {
+		let maybe_next_guardians = T::SessionManager::new_session(session_index + 1);
+		let (next_guardians, next_identities_changed) =
+			if let Some(guardians) = maybe_next_guardians {
 				// NOTE: as per the documentation on `OnSessionEnding`, we consider
 				// the guardian set as having changed even if the guardians are the
 				// same as before, as underlying economic conditions may have changed.
@@ -387,7 +509,7 @@ impl<T: Config> Pallet<T> {
 					return;
 				}
 				// since a new guardian set always leads to `changed` starting
-				// as true, we can ensure that `now_session_keys` and `next_validators`
+				// as true, we can ensure that `now_session_keys` and `next_guardians`
 				// have the same length. this function is called once per iteration.
 				if let Some((_, old_keys)) = now_session_keys.next() {
 					if old_keys != keys {
@@ -395,7 +517,7 @@ impl<T: Config> Pallet<T> {
 					}
 				}
 			};
-			let queued_amalgamated = next_validators
+			let queued_amalgamated = next_guardians
 				.into_iter()
 				.filter_map(|a| {
 					let k = Self::load_keys(&a)?;
@@ -422,6 +544,14 @@ impl<T: Config> Pallet<T> {
 		<KeyOwner<T>>::get((id, key_data))
 	}
 
+	fn put_key_owner(id: KeyTypeId, key_data: &[u8], v: &T::GuardianId) {
+		<KeyOwner<T>>::insert((id, key_data), v)
+	}
+
+	fn clear_key_owner(id: KeyTypeId, key_data: &[u8]) {
+		<KeyOwner<T>>::remove((id, key_data));
+	}
+
 	pub fn populate_info() -> RGuardianInfo {
 		RGuardianInfo {
 			active: 1,
@@ -429,7 +559,4 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	fn load_keys(v: &T::GuardianId) -> Option<T::Keys> {
-		<NextKeys<T>>::get(v)
-	}
 }

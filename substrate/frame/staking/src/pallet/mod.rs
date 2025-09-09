@@ -2043,6 +2043,7 @@ pub mod pallet {
 
 			// Only check limits if they are not already a guardian.
 			if !Guardians::<T>::contains_key(stash) {
+				log::warn!("Call::guard entry not found adding new.");
 				// If this error is reached, we need to adjust the `MinGuardianBond` and start
 				// calling `chill_other`. Until then, we explicitly block new guardians to protect
 				// the runtime.
