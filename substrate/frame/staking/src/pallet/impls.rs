@@ -1350,22 +1350,24 @@ impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 /// some session can lag in between the newest session planned and the latest session started.
 impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T> {
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		log!(warn, "planning new session {} from {}:{}", new_index, file!(), line!());
+		log!(warn, "planning new guard-session {} from {}:{}", new_index, file!(), line!());
 		CurrentPlannedSession::<T>::put(new_index);
-		Self::new_session(new_index, false).map(|v| v.into_inner())
+		// Self::new_session(new_index, false).map(|v| v.into_inner())
+		None
 	}
 	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		log!(warn, "planning new session {} at genesis from {}:{}", new_index, file!(), line!());
+		log!(warn, "planning new guard-session {} at genesis from {}:{}", new_index, file!(), line!());
 		CurrentPlannedSession::<T>::put(new_index);
-		Self::new_session(new_index, true).map(|v| v.into_inner())
+		// Self::new_session(new_index, true).map(|v| v.into_inner())
+		None
 	}
 	fn start_session(start_index: SessionIndex) {
-		log!(warn, "starting session {} from {}:{}", start_index, file!(), line!());
-		Self::start_session(start_index)
+		log!(warn, "starting guard-session {} from {}:{}", start_index, file!(), line!());
+		// Self::start_session(start_index)
 	}
 	fn end_session(end_index: SessionIndex) {
-		log!(warn, "ending session {} from {}:{}", end_index, file!(), line!());
-		Self::end_session(end_index)
+		log!(warn, "ending guard-session {} from {}:{}", end_index, file!(), line!());
+		// Self::end_session(end_index)
 	}
 }
 
@@ -1376,7 +1378,7 @@ impl<T: Config> pallet_guard_session::historical::SessionManager<T::AccountId, E
 		new_index: SessionIndex,
 	) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
 		<Self as pallet_guard_session::SessionManager<_>>::new_session(new_index).map(|validators| {
-			log!(warn, "planning new session {} from {}:{}", new_index, file!(), line!());
+			log!(warn, "planning new guard session historical {} from {}:{}", new_index, file!(), line!());
 			let current_era = Self::current_era()
 				// Must be some as a new era has been created.
 				.unwrap_or(0);
@@ -1393,7 +1395,7 @@ impl<T: Config> pallet_guard_session::historical::SessionManager<T::AccountId, E
 	fn new_session_genesis(
 		new_index: SessionIndex,
 	) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
-		log!(warn, "planning new session {} at genesis from {}:{}", new_index, file!(), line!());
+		log!(warn, "planning new guard session historical {} at genesis from {}:{}", new_index, file!(), line!());
 		<Self as pallet_guard_session::SessionManager<_>>::new_session_genesis(new_index).map(
 			|validators| {
 				let current_era = Self::current_era()
