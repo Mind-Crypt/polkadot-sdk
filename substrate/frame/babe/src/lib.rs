@@ -960,6 +960,7 @@ where
 	where
 		I: Iterator<Item = (&'a T::AccountId, AuthorityId)>,
 	{
+		log::info!(target: LOG_TARGET, "Babe on_genesis_session");
 		let authorities = validators.map(|(_, k)| (k, 1)).collect::<Vec<_>>();
 		Self::initialize_genesis_authorities(&authorities);
 	}

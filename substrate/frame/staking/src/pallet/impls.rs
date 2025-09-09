@@ -373,6 +373,7 @@ impl<T: Config> Pallet<T> {
 		session_index: SessionIndex,
 		is_genesis: bool,
 	) -> Option<BoundedVec<T::AccountId, MaxWinnersOf<T>>> {
+		log!(warn, "planning new session {} from {}:{}", session_index, file!(), line!());
 		if let Some(current_era) = Self::current_era() {
 			// Initial era has been set.
 			let current_era_start_session_index = Self::eras_start_session_index(current_era)
@@ -415,6 +416,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Start a session potentially starting an era.
 	fn start_session(start_session: SessionIndex) {
+		log!(warn, "starting session {} from {}:{}", start_session, file!(), line!());
 		let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
 		// This is only `Some` when current era has already progressed to the next era, while the
 		// active era is one behind (i.e. in the *last session of the active era*, or *first session
@@ -442,6 +444,7 @@ impl<T: Config> Pallet<T> {
 
 	/// End a session potentially ending an era.
 	fn end_session(session_index: SessionIndex) {
+		log!(warn, "ending session {} from {}:{}", session_index, file!(), line!());
 		if let Some(active_era) = Self::active_era() {
 			if let Some(next_active_era_start_session_index) =
 				Self::eras_start_session_index(active_era.index + 1)
@@ -458,6 +461,7 @@ impl<T: Config> Pallet<T> {
 	/// * reset `active_era.start`,
 	/// * update `BondedEras` and apply slashes.
 	fn start_era(start_session: SessionIndex) {
+		log!(warn, "Starting new era at session {}", start_session);
 		let active_era = ActiveEra::<T>::mutate(|active_era| {
 			let new_index = active_era.as_ref().map(|info| info.index + 1).unwrap_or(0);
 			*active_era = Some(ActiveEraInfo {
@@ -496,6 +500,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Compute payout for era.
 	fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
+		log!(warn, "Ending era {}", active_era.index);
 		// Note: active_era_start can be None if end era is called during genesis config.
 		if let Some(active_era_start) = active_era.start {
 			let now_as_millis_u64 = T::UnixTime::now().as_millis().saturated_into::<u64>();
@@ -933,7 +938,7 @@ impl<T: Config> Pallet<T> {
 
 		log!(
 			info,
-			"generated {} npos voters, {} from validators, {} from guardians and {} nominators",
+			"generated {} pos voters, {} from validators, {} from guardians and {} nominators",
 			all_voters.len(),
 			validators_taken,
 			guardians_taken,
@@ -983,7 +988,7 @@ impl<T: Config> Pallet<T> {
 		}
 
 		Self::register_weight(T::WeightInfo::get_npos_targets(all_targets.len() as u32));
-		log!(info, "generated {} npos targets", all_targets.len());
+		log!(info, "generated {} pos targets", all_targets.len());
 
 		all_targets
 	}
@@ -1371,6 +1376,7 @@ impl<T: Config> pallet_guard_session::historical::SessionManager<T::AccountId, E
 		new_index: SessionIndex,
 	) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
 		<Self as pallet_guard_session::SessionManager<_>>::new_session(new_index).map(|validators| {
+			log!(warn, "planning new session {} from {}:{}", new_index, file!(), line!());
 			let current_era = Self::current_era()
 				// Must be some as a new era has been created.
 				.unwrap_or(0);
@@ -1418,6 +1424,7 @@ impl<T: Config> historical::SessionManager<T::AccountId, Exposure<T::AccountId, 
 	fn new_session(
 		new_index: SessionIndex,
 	) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
+		log!(warn, "planning new session {} from {}:{}", new_index, file!(), line!());
 		<Self as pallet_session::SessionManager<_>>::new_session(new_index).map(|validators| {
 			let current_era = Self::current_era()
 				// Must be some as a new era has been created.
