@@ -28,6 +28,22 @@ pub struct RGuardianInfo {
 	pub maximum: u32,
 }
 
+mod app {
+	use sp_application_crypto::{app_crypto, key_types::GUARDIAN, sr25519};
+	app_crypto!(sr25519, GUARDIAN);
+}
+
+sp_application_crypto::with_pair! {
+	/// An authority discovery authority keypair.
+	pub type GuardianPair = app::Pair;
+}
+
+/// An authority discovery authority identifier.
+pub type GuardianIda = app::Public;
+
+/// An authority discovery authority signature.
+pub type GuardianSignature = app::Signature;
+
 /// Decides whether the session should be ended.
 pub trait ShouldEndSession<BlockNumber> {
 	/// Return `true` if the session should be ended.

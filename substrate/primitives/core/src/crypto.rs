@@ -1153,6 +1153,8 @@ pub mod key_types {
 	pub const SASSAFRAS: KeyTypeId = KeyTypeId(*b"sass");
 	/// Key type for Grandpa module, built-in. Identified as `gran`.
 	pub const GRANDPA: KeyTypeId = KeyTypeId(*b"gran");
+	/// Key type for Guardian module, built-in. Identified as `guar`.
+	pub const GUARDIAN: KeyTypeId = KeyTypeId(*b"guar");
 	/// Key type for controlling an account in a Substrate runtime, built-in. Identified as `acco`.
 	pub const ACCOUNT: KeyTypeId = KeyTypeId(*b"acco");
 	/// Key type for Aura module, built-in. Identified as `aura`.

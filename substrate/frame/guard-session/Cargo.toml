@@ -27,6 +27,7 @@ frame-benchmarking = {path = "../benchmarking", default-features = false, option
 frame-support = {path = "../support", default-features = false}
 frame-system = {path = "../system", default-features = false}
 sp-arithmetic = {path = "../../primitives/arithmetic", default-features = false}
+sp-application-crypto = { path = "../../primitives/application-crypto", default-features = false }
 sp-core = {path = "../../primitives/core", default-features = false, features = ["serde"]}
 sp-io = {path = "../../primitives/io", default-features = false}
 sp-runtime = {path = "../../primitives/runtime", default-features = false, features = ["serde"]}
