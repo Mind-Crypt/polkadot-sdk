@@ -39,10 +39,14 @@ sp_application_crypto::with_pair! {
 }
 
 /// An authority discovery authority identifier.
-pub type GuardianIda = app::Public;
+pub type GuardianId = app::Public;
 
 /// An authority discovery authority signature.
 pub type GuardianSignature = app::Signature;
+
+impl<T: Config> sp_runtime::BoundToRuntimeAppPublic for Pallet<T> {
+	type Public = GuardianId;
+}
 
 /// Decides whether the session should be ended.
 pub trait ShouldEndSession<BlockNumber> {
