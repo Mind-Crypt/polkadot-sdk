@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use codec::{Encode, Decode, MaxEncodedLen};
 
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, Convert, Member, One, OpaqueKeys, Zero},
-	ConsensusEngineId, DispatchError, KeyTypeId, Permill, RuntimeAppPublic,
+	traits::{Convert, Member, OpaqueKeys, Zero},
+	DispatchError, KeyTypeId, RuntimeAppPublic,
 };
 use sp_staking::SessionIndex;
 use sp_std::{
@@ -178,19 +178,20 @@ impl<AId> SessionHandler<AId> for Tuple {
 		guardians: &[(AId, Ks)],
 		queued_guardians: &[(AId, Ks)],
 	) {
-		for_tuples!(
-			#(
-				let our_keys: Box<dyn Iterator<Item=_>> = Box::new(guardians.iter()
-					.filter_map(|k|
-						k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
-					));
-				let queued_keys: Box<dyn Iterator<Item=_>> = Box::new(queued_guardians.iter()
-					.filter_map(|k|
-						k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
-					));
-				Tuple::on_new_session(changed, our_keys, queued_keys);
-			)*
-		)
+		// NOTE: Disabled as it currently causes issues with the macro expansion.
+		// for_tuples!(
+		// 	#(
+		// 		let our_keys: Box<dyn Iterator<Item=_>> = Box::new(guardians.iter()
+		// 			.filter_map(|k|
+		// 				k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
+		// 			));
+		// 		let queued_keys: Box<dyn Iterator<Item=_>> = Box::new(queued_guardians.iter()
+		// 			.filter_map(|k|
+		// 				k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
+		// 			));
+		// 		Tuple::on_new_session(changed, our_keys, queued_keys);
+		// 	)*
+		// )
 	}
 
 	fn on_before_session_ending() {
@@ -297,6 +298,10 @@ pub mod pallet {
 			if T::SessionHandler::KEY_TYPE_IDS.len() != T::Keys::key_ids().len() {
 				panic!("Number of keys in session handler and session keys does not match");
 			}
+			log::info!(
+				"SessionHandler::KEY_TYPE_IDS: {:?}",
+				T::SessionHandler::KEY_TYPE_IDS
+			);
 
 			T::SessionHandler::KEY_TYPE_IDS
 				.iter()
@@ -435,8 +440,9 @@ pub mod pallet {
 		/// so the code should be able to handle that.
 		/// You can use `Local Storage` API to coordinate runs of the worker.
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			println!("runtime::guard-session on_initialize {:?}", n);
 			if T::ShouldEndSession::should_end_session(n) {
-				// println!("pallet_guard-session ending session {:?}", 1);
+				println!("runtime::guard-session ending session {:?}", 1);
 				Self::rotate_session();
 				T::BlockWeights::get().max_block
 			} else {
@@ -508,7 +514,7 @@ impl<T: Config> Pallet<T> {
 	/// punishment after a fork.
 	pub fn rotate_session() {
 		let session_index = <CurrentIndex<T>>::get();
-		log::trace!(target: "runtime::guard_session", "rotating session {:?}", session_index);
+		log::info!(target: "runtime::guard_session", "rotating session {:?}", session_index);
 
 		let changed = <QueuedChanged<T>>::get();
 
