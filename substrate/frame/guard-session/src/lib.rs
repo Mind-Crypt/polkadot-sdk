@@ -201,6 +201,33 @@ impl<AId> SessionHandler<AId> for Tuple {
 	}
 }
 
+impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
+	type Key = GuardianId;
+
+	fn on_before_session_ending() {
+		
+	}
+
+	fn on_disabled(_validator_index: u32) {
+		
+	}
+
+	fn on_genesis_session<'a, I: 'a>(validators: I)
+		where
+			I: Iterator<Item = (&'a T::AccountId, Self::Key)>,
+			T::AccountId: 'a {
+		
+	}
+
+	fn on_new_session<'a, I: 'a>(changed: bool, validators: I, queued_validators: I)
+		where
+			I: Iterator<Item = (&'a T::AccountId, Self::Key)>,
+			T::AccountId: 'a {
+		
+	}
+}
+
+
 /// `SessionHandler` for tests that use `UintAuthorityId` as `Keys`.
 pub struct TestSessionHandler;
 impl<AId> SessionHandler<AId> for TestSessionHandler {
