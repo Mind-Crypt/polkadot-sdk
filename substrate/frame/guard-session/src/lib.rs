@@ -159,17 +159,18 @@ impl<AId> SessionHandler<AId> for Tuple {
 	);
 
 	fn on_genesis_session<Ks: OpaqueKeys>(guardians: &[(AId, Ks)]) {
-		for_tuples!(
-			#(
-				let our_keys: Box<dyn Iterator<Item=_>> = Box::new(guardians.iter()
-					.filter_map(|k|
-						k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
-					)
-				);
+		// NOTE: Disabled as it currently causes issues with the macro expansion.
+		// for_tuples!(
+		// 	#(
+		// 		let our_keys: Box<dyn Iterator<Item=_>> = Box::new(guardians.iter()
+		// 			.filter_map(|k|
+		// 				k.1.get::<Tuple::Key>(<Tuple::Key as RuntimeAppPublic>::ID).map(|k1| (&k.0, k1))
+		// 			)
+		// 		);
 
-				Tuple::on_genesis_session(our_keys);
-			)*
-		)
+		// 		Tuple::on_genesis_session(our_keys);
+		// 	)*
+		// )
 	}
 
 	fn on_new_session<Ks: OpaqueKeys>(
