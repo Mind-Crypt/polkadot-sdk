@@ -219,14 +219,26 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
 		where
 			I: Iterator<Item = (&'a T::AccountId, Self::Key)>,
 			T::AccountId: 'a {
-		
+		log::warn!(target: "runtime::guard_session", "on_genesis_session");
+		log::info!(
+			target: "runtime::guard_session",
+			"on_genesis_session called with validators: {:?}",
+			validators.collect::<Vec<_>>()
+		);
 	}
 
 	fn on_new_session<'a, I: 'a>(changed: bool, validators: I, queued_validators: I)
 		where
 			I: Iterator<Item = (&'a T::AccountId, Self::Key)>,
 			T::AccountId: 'a {
-		
+		log::warn!(target: "runtime::guard_session", "on_new_session");
+		log::info!(
+			target: "runtime::guard_session",
+			"on_new_session called with changed: {}, validators: {:?}, queued_validators: {:?}",
+			changed,
+			validators.collect::<Vec<_>>(),
+			queued_validators.collect::<Vec<_>>()
+		);
 	}
 }
 
