@@ -29,6 +29,7 @@ pub struct RGuardianInfo {
 }
 
 mod app {
+	use scale_info::prelude::string::String;
 	use sp_application_crypto::{app_crypto, key_types::GUARDIAN, sr25519};
 	app_crypto!(sr25519, GUARDIAN);
 }
@@ -440,9 +441,9 @@ pub mod pallet {
 		/// so the code should be able to handle that.
 		/// You can use `Local Storage` API to coordinate runs of the worker.
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-			println!("runtime::guard-session on_initialize {:?}", n);
+			log::warn!(target: "runtime::guard-session", "on_initialize {:?}", n);
 			if T::ShouldEndSession::should_end_session(n) {
-				println!("runtime::guard-session ending session {:?}", 1);
+				log::warn!(target: "runtime::guard-session", "ending session {:?}", n);
 				Self::rotate_session();
 				T::BlockWeights::get().max_block
 			} else {

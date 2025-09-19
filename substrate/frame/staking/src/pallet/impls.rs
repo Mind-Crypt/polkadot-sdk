@@ -1353,7 +1353,11 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 		log!(warn, "planning new guard-session {} from {}:{}", new_index, file!(), line!());
 		CurrentPlannedSession::<T>::put(new_index);
 		// Self::new_session(new_index, false).map(|v| v.into_inner())
-		None
+		Some(
+			Guardians::<T>::iter()
+				.map(|(g, _)| g)
+				.collect()
+		)
 	}
 	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
 		log!(warn, "planning new guard-session {} at genesis from {}:{}", new_index, file!(), line!());
