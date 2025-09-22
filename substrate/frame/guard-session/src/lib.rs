@@ -161,6 +161,7 @@ impl<AId> SessionHandler<AId> for Tuple {
 
 	fn on_genesis_session<Ks: OpaqueKeys>(guardians: &[(AId, Ks)]) {
 		// NOTE: Disabled as it currently causes issues with the macro expansion.
+		log::warn!(target: "runtime::guard_session", "OneSessionHandler on_genesis_session macro implementation is disabled due to macro expansion issues.");
 		// for_tuples!(
 		// 	#(
 		// 		let our_keys: Box<dyn Iterator<Item=_>> = Box::new(guardians.iter()
@@ -180,6 +181,7 @@ impl<AId> SessionHandler<AId> for Tuple {
 		queued_guardians: &[(AId, Ks)],
 	) {
 		// NOTE: Disabled as it currently causes issues with the macro expansion.
+		log::warn!(target: "runtime::guard_session", "OneSessionHandler on_new_session macro implementation is disabled due to macro expansion issues.");
 		// for_tuples!(
 		// 	#(
 		// 		let our_keys: Box<dyn Iterator<Item=_>> = Box::new(guardians.iter()
@@ -554,6 +556,12 @@ impl<T: Config> Pallet<T> {
 
 		// Get next guardian set.
 		let maybe_next_guardians = T::SessionManager::new_session(session_index + 1);
+		log::info!(
+			target: "runtime::guard_session",
+			"Next guardian list for session {}: {:?}",
+			session_index + 1,
+			maybe_next_guardians
+		);
 		let (next_guardians, next_identities_changed) =
 			if let Some(guardians) = maybe_next_guardians {
 				// NOTE: as per the documentation on `OnSessionEnding`, we consider
