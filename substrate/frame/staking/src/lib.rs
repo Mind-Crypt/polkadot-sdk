@@ -326,6 +326,7 @@ pub use pallet::{pallet::*, UseNominatorsAndValidatorsMap, UseValidatorsMap};
 
 pub(crate) const STAKING_ID: LockIdentifier = *b"staking ";
 pub(crate) const LOG_TARGET: &str = "runtime::staking";
+pub(crate) const SEC_LOG_TARGET: &str = pallet_guard_session::LOG_TARGET;
 
 // syntactic sugar for logging.
 #[macro_export]

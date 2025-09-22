@@ -302,6 +302,8 @@ pub trait SessionHandler<ValidatorId> {
 	fn on_disabled(validator_index: u32);
 }
 
+const SEC_LOG_TARGET: &str = "runtime::guard-session";
+
 #[impl_trait_for_tuples::impl_for_tuples(1, 30)]
 #[tuple_types_custom_trait_bound(OneSessionHandler<AId>)]
 impl<AId> SessionHandler<AId> for Tuple {
@@ -310,6 +312,7 @@ impl<AId> SessionHandler<AId> for Tuple {
 	);
 
 	fn on_genesis_session<Ks: OpaqueKeys>(validators: &[(AId, Ks)]) {
+		log::warn!(target: SEC_LOG_TARGET, "pallet-session on_genesis_session");
 		for_tuples!(
 			#(
 				let our_keys: Box<dyn Iterator<Item=_>> = Box::new(validators.iter()
@@ -328,6 +331,7 @@ impl<AId> SessionHandler<AId> for Tuple {
 		validators: &[(AId, Ks)],
 		queued_validators: &[(AId, Ks)],
 	) {
+		log::warn!(target: SEC_LOG_TARGET, "pallet-session on_new_session");
 		for_tuples!(
 			#(
 				let our_keys: Box<dyn Iterator<Item=_>> = Box::new(validators.iter()
@@ -344,10 +348,12 @@ impl<AId> SessionHandler<AId> for Tuple {
 	}
 
 	fn on_before_session_ending() {
+		log::warn!(target: SEC_LOG_TARGET, "pallet-session on_before_session_ending");
 		for_tuples!( #( Tuple::on_before_session_ending(); )* )
 	}
 
 	fn on_disabled(i: u32) {
+		log::warn!(target: SEC_LOG_TARGET, "pallet-session on_disabled {}", i);
 		for_tuples!( #( Tuple::on_disabled(i); )* )
 	}
 }

@@ -21,6 +21,8 @@ pub mod historical;
 
 pub use pallet::*;
 
+pub const LOG_TARGET: &str = "runtime::guard-session";
+
 #[derive(Clone, Eq, PartialEq, Default, Debug, TypeInfo, Encode, Decode, MaxEncodedLen)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RGuardianInfo {
@@ -161,7 +163,7 @@ impl<AId> SessionHandler<AId> for Tuple {
 
 	fn on_genesis_session<Ks: OpaqueKeys>(guardians: &[(AId, Ks)]) {
 		// NOTE: Disabled as it currently causes issues with the macro expansion.
-		log::warn!(target: "runtime::guard_session", "OneSessionHandler on_genesis_session macro implementation is disabled due to macro expansion issues.");
+		log::warn!(target: LOG_TARGET, "OneSessionHandler on_genesis_session macro implementation is disabled due to macro expansion issues.");
 		// for_tuples!(
 		// 	#(
 		// 		let our_keys: Box<dyn Iterator<Item=_>> = Box::new(guardians.iter()
@@ -181,7 +183,7 @@ impl<AId> SessionHandler<AId> for Tuple {
 		queued_guardians: &[(AId, Ks)],
 	) {
 		// NOTE: Disabled as it currently causes issues with the macro expansion.
-		log::warn!(target: "runtime::guard_session", "OneSessionHandler on_new_session macro implementation is disabled due to macro expansion issues.");
+		log::warn!(target: LOG_TARGET, "OneSessionHandler on_new_session macro implementation is disabled due to macro expansion issues.");
 		// for_tuples!(
 		// 	#(
 		// 		let our_keys: Box<dyn Iterator<Item=_>> = Box::new(guardians.iter()
@@ -206,7 +208,7 @@ impl<AId> SessionHandler<AId> for Tuple {
 	}
 }
 
-impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
+impl<T: Config> OneSessionHandler<T::GuardianId> for Pallet<T> {
 	type Key = GuardianId;
 
 	fn on_before_session_ending() {
@@ -219,11 +221,11 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
 
 	fn on_genesis_session<'a, I: 'a>(validators: I)
 		where
-			I: Iterator<Item = (&'a T::AccountId, Self::Key)>,
-			T::AccountId: 'a {
-		log::warn!(target: "runtime::guard_session", "on_genesis_session");
+			I: Iterator<Item = (&'a T::GuardianId, Self::Key)>,
+			T::GuardianId: 'a {
+		log::warn!(target: LOG_TARGET, "on_genesis_session");
 		log::info!(
-			target: "runtime::guard_session",
+			target: LOG_TARGET,
 			"on_genesis_session called with validators: {:?}",
 			validators.collect::<Vec<_>>()
 		);
@@ -231,11 +233,12 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
 
 	fn on_new_session<'a, I: 'a>(changed: bool, validators: I, queued_validators: I)
 		where
-			I: Iterator<Item = (&'a T::AccountId, Self::Key)>,
-			T::AccountId: 'a {
-		log::warn!(target: "runtime::guard_session", "on_new_session");
+			I: Iterator<Item = (&'a T::GuardianId, Self::Key)>,
+			T::GuardianId: 'a {
+		log::warn!(target: LOG_TARGET, "on_new_session");
+		let bt = std::backtrace::Backtrace::force_capture();
 		log::info!(
-			target: "runtime::guard_session",
+			target: LOG_TARGET,
 			"on_new_session called with changed: {}, validators: {:?}, queued_validators: {:?}",
 			changed,
 			validators.collect::<Vec<_>>(),
@@ -455,16 +458,15 @@ pub mod pallet {
 		/// so the code should be able to handle that.
 		/// You can use `Local Storage` API to coordinate runs of the worker.
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-			log::warn!(target: "runtime::guard-session", "on_initialize {:?}", n);
+			log::warn!(target: LOG_TARGET, "on_initialize {:?}", n);
 			if T::ShouldEndSession::should_end_session(n) {
-				log::warn!(target: "runtime::guard-session", "ending session {:?}", n);
+				log::warn!(target: LOG_TARGET, "ending session {:?}", n);
 				Self::rotate_session();
 				T::BlockWeights::get().max_block
 			} else {
 				// NOTE: the non-database part of the weight for `should_end_session(n)` is
 				// included as weight for empty block, the database part is expected to be in
 				// cache.
-				// println!("pallet_guard-session session not ending {:?}", 1);
 				Weight::zero()
 			}
 		}
@@ -529,7 +531,7 @@ impl<T: Config> Pallet<T> {
 	/// punishment after a fork.
 	pub fn rotate_session() {
 		let session_index = <CurrentIndex<T>>::get();
-		log::info!(target: "runtime::guard_session", "rotating session {:?}", session_index);
+		log::info!(target: LOG_TARGET, "rotating session {:?}", session_index);
 
 		let changed = <QueuedChanged<T>>::get();
 
@@ -557,7 +559,7 @@ impl<T: Config> Pallet<T> {
 		// Get next guardian set.
 		let maybe_next_guardians = T::SessionManager::new_session(session_index + 1);
 		log::info!(
-			target: "runtime::guard_session",
+			target: LOG_TARGET,
 			"Next guardian list for session {}: {:?}",
 			session_index + 1,
 			maybe_next_guardians

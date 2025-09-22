@@ -48,10 +48,7 @@ use sp_staking::{
 use sp_std::prelude::*;
 
 use crate::{
-	election_size_tracker::StaticTracker, log, slashing, weights::WeightInfo, ActiveEraInfo,
-	BalanceOf, EraInfo, EraPayout, Exposure, ExposureOf, Forcing, IndividualExposure,
-	MaxNominationsOf, MaxWinnersOf, Nominations, NominationsQuota, PositiveImbalanceOf,
-	RewardDestination, SessionInterface, StakingLedger, ValidatorPrefs, GuardianPrefs,
+	election_size_tracker::StaticTracker, log, slashing, weights::WeightInfo, ActiveEraInfo, BalanceOf, EraInfo, EraPayout, Exposure, ExposureOf, Forcing, GuardianPrefs, IndividualExposure, MaxNominationsOf, MaxWinnersOf, Nominations, NominationsQuota, PositiveImbalanceOf, RewardDestination, SessionInterface, StakingLedger, ValidatorPrefs, SEC_LOG_TARGET
 };
 
 use super::pallet::*;
@@ -1350,7 +1347,7 @@ impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 /// some session can lag in between the newest session planned and the latest session started.
 impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T> {
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		log!(warn, "planning new guard-session {} from {}:{}", new_index, file!(), line!());
+		log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} from {}:{}", new_index, file!(), line!());
 		CurrentPlannedSession::<T>::put(new_index);
 		// Self::new_session(new_index, false).map(|v| v.into_inner())
 		Some(
@@ -1360,17 +1357,17 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 		)
 	}
 	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		log!(warn, "planning new guard-session {} at genesis from {}:{}", new_index, file!(), line!());
+		log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} at genesis from {}:{}", new_index, file!(), line!());
 		CurrentPlannedSession::<T>::put(new_index);
 		// Self::new_session(new_index, true).map(|v| v.into_inner())
 		None
 	}
 	fn start_session(start_index: SessionIndex) {
-		log!(warn, "starting guard-session {} from {}:{}", start_index, file!(), line!());
+		log::warn!(target: SEC_LOG_TARGET, "starting guard-session {} from {}:{}", start_index, file!(), line!());
 		// Self::start_session(start_index)
 	}
 	fn end_session(end_index: SessionIndex) {
-		log!(warn, "ending guard-session {} from {}:{}", end_index, file!(), line!());
+		log::warn!(target: SEC_LOG_TARGET, "ending guard-session {} from {}:{}", end_index, file!(), line!());
 		// Self::end_session(end_index)
 	}
 }
@@ -1382,7 +1379,7 @@ impl<T: Config> pallet_guard_session::historical::SessionManager<T::AccountId, E
 		new_index: SessionIndex,
 	) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
 		<Self as pallet_guard_session::SessionManager<_>>::new_session(new_index).map(|validators| {
-			log!(warn, "planning new guard session historical {} from {}:{}", new_index, file!(), line!());
+			log::warn!(target: SEC_LOG_TARGET, "planning new guard session historical {} from {}:{}", new_index, file!(), line!());
 			let current_era = Self::current_era()
 				// Must be some as a new era has been created.
 				.unwrap_or(0);
@@ -1399,7 +1396,7 @@ impl<T: Config> pallet_guard_session::historical::SessionManager<T::AccountId, E
 	fn new_session_genesis(
 		new_index: SessionIndex,
 	) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
-		log!(warn, "planning new guard session historical {} at genesis from {}:{}", new_index, file!(), line!());
+		log::warn!(target: SEC_LOG_TARGET, "planning new guard session historical {} at genesis from {}:{}", new_index, file!(), line!());
 		<Self as pallet_guard_session::SessionManager<_>>::new_session_genesis(new_index).map(
 			|validators| {
 				let current_era = Self::current_era()

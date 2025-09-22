@@ -1,0 +1,635 @@
+[
+    {
+        "fn": "std::backtrace_rs::backtrace::libunwind::trace",
+        "file": "/rustc/90b35a6239c3d8bdabc530a6a0816f7ff89a0aaf/library/std/src/../../backtrace/src/backtrace/libunwind.rs",
+        "line": 116
+    },
+    {
+        "fn": "std::backtrace_rs::backtrace::trace_unsynchronized",
+        "file": "/rustc/90b35a6239c3d8bdabc530a6a0816f7ff89a0aaf/library/std/src/../../backtrace/src/backtrace/mod.rs",
+        "line": 66
+    },
+    {
+        "fn": "std::backtrace::Backtrace::create",
+        "file": "/rustc/90b35a6239c3d8bdabc530a6a0816f7ff89a0aaf/library/std/src/backtrace.rs",
+        "line": 331
+    },
+    {
+        "fn": "pallet_guard_session::<impl frame_support::traits::validation::OneSessionHandler<<T as frame_system::pallet::Config>::AccountId> for pallet_guard_session::pallet::Pallet<T>>::on_new_session",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/frame/guard-session/src/lib.rs",
+        "line": 239
+    },
+    {
+        "fn": "<(TupleElement0,TupleElement1,TupleElement2,TupleElement3,TupleElement4) as pallet_session::SessionHandler<AId>>::on_new_session",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/frame/session/src/lib.rs",
+        "line": 305
+    },
+    {
+        "fn": "pallet_session::<impl pallet_session::pallet::Pallet<T>>::rotate_session",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/frame/session/src/lib.rs",
+        "line": 701
+    },
+    {
+        "fn": "<pallet_session::pallet::Pallet<T> as frame_support::traits::hooks::Hooks<<<T as frame_system::pallet::Config>::Header as sp_runtime::traits::Header>::Number>>::on_initialize",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/frame/session/src/lib.rs",
+        "line": 565
+    },
+    {
+        "fn": "<pallet_session::pallet::Pallet<T> as frame_support::traits::hooks::OnInitialize<<<T as frame_system::pallet::Config>::Header as sp_runtime::traits::Header>::Number>>::on_initialize",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/frame/session/src/lib.rs",
+        "line": 559
+    },
+    {
+        "fn": "<(TupleElement0,TupleElement1,TupleElement2,TupleElement3,TupleElement4,TupleElement5,TupleElement6,TupleElement7,TupleElement8,TupleElement9,TupleElement10,TupleElement11,TupleElement12,TupleElement13,TupleElement14,TupleElement15,TupleElement16,TupleElement17,TupleElement18,TupleElement19,TupleElement20,TupleElement21,TupleElement22,TupleElement23,TupleElement24,TupleElement25,TupleElement26,TupleElement27,TupleElement28,TupleElement29,TupleElement30,TupleElement31,TupleElement32) as frame_support::traits::hooks::OnInitialize<BlockNumber>>::on_initialize",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/frame/support/src/traits/hooks.rs",
+        "line": 40
+    },
+    {
+        "fn": "frame_executive::Executive<System,Block,Context,UnsignedValidator,AllPalletsWithSystem,COnRuntimeUpgrade>::initialize_block_impl",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/frame/executive/src/lib.rs",
+        "line": 510
+    },
+    {
+        "fn": "frame_executive::Executive<System,Block,Context,UnsignedValidator,AllPalletsWithSystem,COnRuntimeUpgrade>::initialize_block",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/frame/executive/src/lib.rs",
+        "line": 476
+    },
+    {
+        "fn": "frame_executive::Executive<System,Block,Context,UnsignedValidator,AllPalletsWithSystem,COnRuntimeUpgrade>::execute_block::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/frame/executive/src/lib.rs",
+        "line": 556
+    },
+    {
+        "fn": "tracing::span::Span::in_scope",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-0.1.41/src/span.rs",
+        "line": 1102
+    },
+    {
+        "fn": "frame_executive::Executive<System,Block,Context,UnsignedValidator,AllPalletsWithSystem,COnRuntimeUpgrade>::execute_block",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/frame/executive/src/lib.rs",
+        "line": 553
+    },
+    {
+        "fn": "da_runtime::apis::<impl sp_api::runtime_decl_for_core::CoreV4<mindcrypt_core::da_block::DaBlock<mindcrypt_core::header::Header<u32,sp_runtime::traits::BlakeTwo256>,mindcrypt_core::asdr::AppUncheckedExtrinsic<sp_runtime::multiaddress::MultiAddress<<<sp_runtime::MultiSignature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId,u32>,da_runtime::RuntimeCall,sp_runtime::MultiSignature,(frame_system::extensions::check_non_zero_sender::CheckNonZeroSender<da_runtime::Runtime>,frame_system::extensions::check_spec_version::CheckSpecVersion<da_runtime::Runtime>,frame_system::extensions::check_tx_version::CheckTxVersion<da_runtime::Runtime>,frame_system::extensions::check_genesis::CheckGenesis<da_runtime::Runtime>,frame_system::extensions::check_mortality::CheckMortality<da_runtime::Runtime>,frame_system::extensions::check_nonce::CheckNonce<da_runtime::Runtime>,frame_system::extensions::check_weight::CheckWeight<da_runtime::Runtime>,pallet_transaction_payment::ChargeTransactionPayment<da_runtime::Runtime>,da_control::extensions::check_app_id::CheckAppId<da_runtime::Runtime>)>>> for da_runtime::Runtime>::execute_block",
+        "file": "./runtime/src/apis.rs",
+        "line": 89
+    },
+    {
+        "fn": "da_runtime::apis::api::dispatch",
+        "file": "./runtime/src/apis.rs",
+        "line": 82
+    },
+    {
+        "fn": "<mindcrypt_node::service::ExecutorDispatch as sc_executor::executor::NativeExecutionDispatch>::dispatch",
+        "file": "./node/src/service.rs",
+        "line": 67
+    },
+    {
+        "fn": "<sc_executor::executor::NativeElseWasmExecutor<D> as sp_core::traits::CodeExecutor>::call::{{closure}}::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/executor/src/executor.rs",
+        "line": 701
+    },
+    {
+        "fn": "std::panicking::try::do_call",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panicking.rs",
+        "line": 557
+    },
+    {
+        "fn": "___rust_try"
+    },
+    {
+        "fn": "std::panicking::try",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panicking.rs",
+        "line": 520
+    },
+    {
+        "fn": "std::panic::catch_unwind",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panic.rs",
+        "line": 358
+    },
+    {
+        "fn": "sc_executor::executor::with_externalities_safe::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/executor/src/executor.rs",
+        "line": 54
+    },
+    {
+        "fn": "environmental::using::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/environmental-1.1.4/src/lib.rs",
+        "line": 124
+    },
+    {
+        "fn": "std::thread::local::LocalKey<T>::try_with",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/thread/local.rs",
+        "line": 283
+    },
+    {
+        "fn": "std::thread::local::LocalKey<T>::with",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/thread/local.rs",
+        "line": 260
+    },
+    {
+        "fn": "environmental::using",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/environmental-1.1.4/src/lib.rs",
+        "line": 115
+    },
+    {
+        "fn": "sp_externalities::scope_limited::ext::using",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/environmental-1.1.4/src/lib.rs",
+        "line": 295
+    },
+    {
+        "fn": "sp_externalities::scope_limited::set_and_run_with_externalities",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/primitives/externalities/src/scope_limited.rs",
+        "line": 31
+    },
+    {
+        "fn": "sc_executor::executor::with_externalities_safe",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/executor/src/executor.rs",
+        "line": 50
+    },
+    {
+        "fn": "<sc_executor::executor::NativeElseWasmExecutor<D> as sp_core::traits::CodeExecutor>::call::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/executor/src/executor.rs",
+        "line": 701
+    },
+    {
+        "fn": "sc_executor::executor::WasmExecutor<H>::with_instance::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/executor/src/executor.rs",
+        "line": 354
+    },
+    {
+        "fn": "sc_executor::wasm_runtime::VersionedRuntime::with_instance",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/executor/src/wasm_runtime.rs",
+        "line": 109
+    },
+    {
+        "fn": "sc_executor::wasm_runtime::RuntimeCache::with_instance",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/executor/src/wasm_runtime.rs",
+        "line": 285
+    },
+    {
+        "fn": "sc_executor::executor::WasmExecutor<H>::with_instance",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/executor/src/executor.rs",
+        "line": 344
+    },
+    {
+        "fn": "<sc_executor::executor::NativeElseWasmExecutor<D> as sp_core::traits::CodeExecutor>::call",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/executor/src/executor.rs",
+        "line": 681
+    },
+    {
+        "fn": "sp_state_machine::execution::StateMachine<B,H,Exec>::execute",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/primitives/state-machine/src/lib.rs",
+        "line": 289
+    },
+    {
+        "fn": "<sc_service::client::call_executor::LocalCallExecutor<Block,B,E> as sc_client_api::call_executor::CallExecutor<Block>>::contextual_call",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/service/src/client/call_executor.rs",
+        "line": 254
+    },
+    {
+        "fn": "<sc_service::client::client::Client<B,E,Block,RA> as sp_api::CallApiAt<Block>>::call_api_at",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/service/src/client/client.rs",
+        "line": 1689
+    },
+    {
+        "fn": "<da_runtime::apis::RuntimeApiImpl<__SrApiBlock__,RuntimeApiImplCall> as sp_api::Core<__SrApiBlock__>>::__runtime_api_internal_call_api_at::{{closure}}",
+        "file": "./runtime/src/apis.rs",
+        "line": 82
+    },
+    {
+        "fn": "<da_runtime::apis::RuntimeApiImpl<__SrApiBlock__,RuntimeApiImplCall> as sp_api::Core<__SrApiBlock__>>::__runtime_api_internal_call_api_at",
+        "file": "./runtime/src/apis.rs",
+        "line": 82
+    },
+    {
+        "fn": "sp_api::Core::execute_block",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/primitives/api/src/lib.rs",
+        "line": 797
+    },
+    {
+        "fn": "sc_service::client::client::Client<B,E,Block,RA>::prepare_block_storage_changes",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/service/src/client/client.rs",
+        "line": 872
+    },
+    {
+        "fn": "<&sc_service::client::client::Client<B,E,Block,RA> as sc_consensus::block_import::BlockImport<Block>>::import_block::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/service/src/client/client.rs",
+        "line": 1754
+    },
+    {
+        "fn": "<core::pin::Pin<P> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs",
+        "line": 123
+    },
+    {
+        "fn": "<sc_consensus_grandpa::import::GrandpaBlockImport<BE,Block,Client,SC> as sc_consensus::block_import::BlockImport<Block>>::import_block::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/consensus/grandpa/src/import.rs",
+        "line": 580
+    },
+    {
+        "fn": "<core::pin::Pin<P> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs",
+        "line": 123
+    },
+    {
+        "fn": "<sc_consensus_babe::BabeBlockImport<Block,Client,Inner> as sc_consensus::block_import::BlockImport<Block>>::import_block::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/consensus/babe/src/lib.rs",
+        "line": 1669
+    },
+    {
+        "fn": "<core::pin::Pin<P> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs",
+        "line": 123
+    },
+    {
+        "fn": "<mindcrypt_node::da_block_import::BlockImport<B,C,I> as sc_consensus::block_import::BlockImport<B>>::import_block::{{closure}}",
+        "file": "./node/src/da_block_import.rs",
+        "line": 133
+    },
+    {
+        "fn": "<core::pin::Pin<P> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs",
+        "line": 123
+    },
+    {
+        "fn": "<alloc::boxed::Box<dyn sc_consensus::block_import::BlockImport<B>+Error = sp_consensus::error::Error+core::marker::Send+core::marker::Sync> as sc_consensus::block_import::BlockImport<B>>::import_block::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/consensus/common/src/block_import.rs",
+        "line": 339
+    },
+    {
+        "fn": "<core::pin::Pin<P> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs",
+        "line": 123
+    },
+    {
+        "fn": "sc_consensus::import_queue::import_single_block_metered::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/consensus/common/src/import_queue.rs",
+        "line": 385
+    },
+    {
+        "fn": "sc_consensus::import_queue::import_single_block_metered_v2::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/consensus/common/src/import_queue.rs",
+        "line": 251
+    },
+    {
+        "fn": "sc_consensus::import_queue::basic_queue::import_many_blocks::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/consensus/common/src/import_queue/basic_queue.rs",
+        "line": 442
+    },
+    {
+        "fn": "sc_consensus::import_queue::basic_queue::block_import_process::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/consensus/common/src/import_queue/basic_queue.rs",
+        "line": 250
+    },
+    {
+        "fn": "<core::pin::Pin<P> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs",
+        "line": 123
+    },
+    {
+        "fn": "<&mut F as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs",
+        "line": 111
+    },
+    {
+        "fn": "futures_util::future::future::FutureExt::poll_unpin",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-util-0.3.31/src/future/future/mod.rs",
+        "line": 558
+    },
+    {
+        "fn": "<futures_util::async_await::poll::PollOnce<F> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-util-0.3.31/src/async_await/poll.rs",
+        "line": 37
+    },
+    {
+        "fn": "sc_consensus::import_queue::basic_queue::BlockImportWorker<B>::new::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/consensus/common/src/import_queue/basic_queue.rs",
+        "line": 330
+    },
+    {
+        "fn": "<core::pin::Pin<P> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs",
+        "line": 123
+    },
+    {
+        "fn": "<core::panic::unwind_safe::AssertUnwindSafe<F> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs",
+        "line": 297
+    },
+    {
+        "fn": "<futures_util::future::future::catch_unwind::CatchUnwind<Fut> as core::future::future::Future>::poll::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-util-0.3.31/src/future/future/catch_unwind.rs",
+        "line": 37
+    },
+    {
+        "fn": "<core::panic::unwind_safe::AssertUnwindSafe<F> as core::ops::function::FnOnce<()>>::call_once",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs",
+        "line": 272
+    },
+    {
+        "fn": "std::panicking::try::do_call",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panicking.rs",
+        "line": 557
+    },
+    {
+        "fn": "___rust_try"
+    },
+    {
+        "fn": "std::panicking::try",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panicking.rs",
+        "line": 520
+    },
+    {
+        "fn": "std::panic::catch_unwind",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panic.rs",
+        "line": 358
+    },
+    {
+        "fn": "<futures_util::future::future::catch_unwind::CatchUnwind<Fut> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-util-0.3.31/src/future/future/catch_unwind.rs",
+        "line": 37
+    },
+    {
+        "fn": "<futures_util::future::future::map::Map<Fut,F> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-util-0.3.31/src/future/future/map.rs",
+        "line": 55
+    },
+    {
+        "fn": "<futures_util::future::future::Map<Fut,F> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-util-0.3.31/src/lib.rs",
+        "line": 86
+    },
+    {
+        "fn": "<sc_service::task_manager::prometheus_future::PrometheusFuture<T> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/service/src/task_manager/prometheus_future.rs",
+        "line": 61
+    },
+    {
+        "fn": "<core::panic::unwind_safe::AssertUnwindSafe<F> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs",
+        "line": 297
+    },
+    {
+        "fn": "<futures_util::future::future::catch_unwind::CatchUnwind<Fut> as core::future::future::Future>::poll::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-util-0.3.31/src/future/future/catch_unwind.rs",
+        "line": 37
+    },
+    {
+        "fn": "<core::panic::unwind_safe::AssertUnwindSafe<F> as core::ops::function::FnOnce<()>>::call_once",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs",
+        "line": 272
+    },
+    {
+        "fn": "std::panicking::try::do_call",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panicking.rs",
+        "line": 557
+    },
+    {
+        "fn": "___rust_try"
+    },
+    {
+        "fn": "std::panicking::try",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panicking.rs",
+        "line": 520
+    },
+    {
+        "fn": "std::panic::catch_unwind",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panic.rs",
+        "line": 358
+    },
+    {
+        "fn": "<futures_util::future::future::catch_unwind::CatchUnwind<Fut> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-util-0.3.31/src/future/future/catch_unwind.rs",
+        "line": 37
+    },
+    {
+        "fn": "<core::pin::Pin<P> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/future/future.rs",
+        "line": 123
+    },
+    {
+        "fn": "futures_util::future::future::FutureExt::poll_unpin",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-util-0.3.31/src/future/future/mod.rs",
+        "line": 558
+    },
+    {
+        "fn": "<futures_util::future::select::Select<A,B> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-util-0.3.31/src/future/select.rs",
+        "line": 118
+    },
+    {
+        "fn": "sc_service::task_manager::SpawnTaskHandle::spawn_inner::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/service/src/task_manager/mod.rs",
+        "line": 168
+    },
+    {
+        "fn": "<tracing_futures::Instrumented<T> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tracing-futures-0.2.5/src/lib.rs",
+        "line": 283
+    },
+    {
+        "fn": "tokio::runtime::park::CachedParkThread::block_on::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/park.rs",
+        "line": 281
+    },
+    {
+        "fn": "tokio::runtime::coop::with_budget",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/coop.rs",
+        "line": 107
+    },
+    {
+        "fn": "tokio::runtime::coop::budget",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/coop.rs",
+        "line": 73
+    },
+    {
+        "fn": "tokio::runtime::park::CachedParkThread::block_on",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/park.rs",
+        "line": 281
+    },
+    {
+        "fn": "tokio::runtime::context::blocking::BlockingRegionGuard::block_on",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/context/blocking.rs",
+        "line": 66
+    },
+    {
+        "fn": "tokio::runtime::handle::Handle::block_on_inner::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/handle.rs",
+        "line": 327
+    },
+    {
+        "fn": "tokio::runtime::context::runtime::enter_runtime",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/context/runtime.rs",
+        "line": 65
+    },
+    {
+        "fn": "tokio::runtime::handle::Handle::block_on_inner",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/handle.rs",
+        "line": 326
+    },
+    {
+        "fn": "tokio::runtime::handle::Handle::block_on",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/handle.rs",
+        "line": 305
+    },
+    {
+        "fn": "sc_service::task_manager::SpawnTaskHandle::spawn_inner::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/git/checkouts/polkadot-sdk-862a85c09ac3e925/68e31f2/substrate/client/service/src/task_manager/mod.rs",
+        "line": 204
+    },
+    {
+        "fn": "<tokio::runtime::blocking::task::BlockingTask<T> as core::future::future::Future>::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/blocking/task.rs",
+        "line": 42
+    },
+    {
+        "fn": "tokio::runtime::task::core::Core<T,S>::poll::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/task/core.rs",
+        "line": 331
+    },
+    {
+        "fn": "tokio::loom::std::unsafe_cell::UnsafeCell<T>::with_mut",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/loom/std/unsafe_cell.rs",
+        "line": 16
+    },
+    {
+        "fn": "tokio::runtime::task::core::Core<T,S>::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/task/core.rs",
+        "line": 320
+    },
+    {
+        "fn": "tokio::runtime::task::harness::poll_future::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/task/harness.rs",
+        "line": 499
+    },
+    {
+        "fn": "<core::panic::unwind_safe::AssertUnwindSafe<F> as core::ops::function::FnOnce<()>>::call_once",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs",
+        "line": 272
+    },
+    {
+        "fn": "std::panicking::try::do_call",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panicking.rs",
+        "line": 557
+    },
+    {
+        "fn": "___rust_try"
+    },
+    {
+        "fn": "std::panicking::try",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panicking.rs",
+        "line": 520
+    },
+    {
+        "fn": "std::panic::catch_unwind",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panic.rs",
+        "line": 358
+    },
+    {
+        "fn": "tokio::runtime::task::harness::poll_future",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/task/harness.rs",
+        "line": 487
+    },
+    {
+        "fn": "tokio::runtime::task::harness::Harness<T,S>::poll_inner",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/task/harness.rs",
+        "line": 209
+    },
+    {
+        "fn": "tokio::runtime::task::harness::Harness<T,S>::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/task/harness.rs",
+        "line": 154
+    },
+    {
+        "fn": "tokio::runtime::task::raw::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/task/raw.rs",
+        "line": 271
+    },
+    {
+        "fn": "tokio::runtime::task::raw::RawTask::poll",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/task/raw.rs",
+        "line": 201
+    },
+    {
+        "fn": "tokio::runtime::task::UnownedTask<S>::run",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/task/mod.rs",
+        "line": 472
+    },
+    {
+        "fn": "tokio::runtime::blocking::pool::Task::run",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/blocking/pool.rs",
+        "line": 161
+    },
+    {
+        "fn": "tokio::runtime::blocking::pool::Inner::run",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/blocking/pool.rs",
+        "line": 511
+    },
+    {
+        "fn": "tokio::runtime::blocking::pool::Spawner::spawn_thread::{{closure}}",
+        "file": "/Users/ujjwal/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.42.0/src/runtime/blocking/pool.rs",
+        "line": 469
+    },
+    {
+        "fn": "std::sys::backtrace::__rust_begin_short_backtrace",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs",
+        "line": 154
+    },
+    {
+        "fn": "std::thread::Builder::spawn_unchecked_::{{closure}}::{{closure}}",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/thread/mod.rs",
+        "line": 538
+    },
+    {
+        "fn": "<core::panic::unwind_safe::AssertUnwindSafe<F> as core::ops::function::FnOnce<()>>::call_once",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs",
+        "line": 272
+    },
+    {
+        "fn": "std::panicking::try::do_call",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panicking.rs",
+        "line": 557
+    },
+    {
+        "fn": "___rust_try"
+    },
+    {
+        "fn": "std::panicking::try",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panicking.rs",
+        "line": 520
+    },
+    {
+        "fn": "std::panic::catch_unwind",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/panic.rs",
+        "line": 358
+    },
+    {
+        "fn": "std::thread::Builder::spawn_unchecked_::{{closure}}",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/thread/mod.rs",
+        "line": 537
+    },
+    {
+        "fn": "core::ops::function::FnOnce::call_once{{vtable.shim}}",
+        "file": "/Users/ujjwal/.rustup/toolchains/1.83.0-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ops/function.rs",
+        "line": 250
+    },
+    {
+        "fn": "<alloc::boxed::Box<F,A> as core::ops::function::FnOnce<Args>>::call_once",
+        "file": "/rustc/90b35a6239c3d8bdabc530a6a0816f7ff89a0aaf/library/alloc/src/boxed.rs",
+        "line": 2454
+    },
+    {
+        "fn": "<alloc::boxed::Box<F,A> as core::ops::function::FnOnce<Args>>::call_once",
+        "file": "/rustc/90b35a6239c3d8bdabc530a6a0816f7ff89a0aaf/library/alloc/src/boxed.rs",
+        "line": 2454
+    },
+    {
+        "fn": "std::sys::pal::unix::thread::Thread::new::thread_start",
+        "file": "/rustc/90b35a6239c3d8bdabc530a6a0816f7ff89a0aaf/library/std/src/sys/pal/unix/thread.rs",
+        "line": 105
+    },
+    {
+        "fn": "__pthread_cond_wait"
+    }
+]
