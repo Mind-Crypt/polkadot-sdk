@@ -421,13 +421,24 @@ pub struct ValidatorPrefs {
 	pub blocked: bool,
 }
 
-/// Preference of what happens regarding validation.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Default, MaxEncodedLen)]
+pub struct ComputePrefs {
+	pub trusted: bool,
+	pub tee: bool,
+	pub mpc: bool,
+	pub fhe: bool,
+	pub zkp: bool,
+}
+
+/// Preference of what happens regarding guarding.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Default, MaxEncodedLen)]
 pub struct GuardianPrefs {
 	/// Reward that validator takes up-front; only the rest is split between themselves and
 	/// nominators.
-	#[codec(compact)]
-	pub commission: Perbill,
+	pub pub_key: [u8; 32],
+	pub verifier: bool,
+	pub compute: bool,
+	pub compute_prefs: Option<ComputePrefs>,
 }
 
 /// Just a Balance/BlockNumber tuple to encode when a chunk of funds will be unlocked.

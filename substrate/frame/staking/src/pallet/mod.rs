@@ -2038,9 +2038,6 @@ pub mod pallet {
 			let stash = &ledger.stash;
 			log::warn!("Call::guard called by: {:?}", stash);
 
-			// ensure their commission is correct.
-			ensure!(prefs.commission >= MinCommission::<T>::get(), Error::<T>::CommissionTooLow);
-
 			// Only check limits if they are not already a guardian.
 			if !Guardians::<T>::contains_key(stash) {
 				log::warn!("Call::guard entry not found adding new.");
