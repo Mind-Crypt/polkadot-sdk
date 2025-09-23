@@ -573,6 +573,12 @@ impl<T: Config> Pallet<T> {
 			} else {
 				(Guardians::<T>::get(), false)
 			};
+		log::info!(
+			target: LOG_TARGET,
+			"Next guardian set for session {}: {:?}",
+			session_index + 1,
+			next_guardians
+		);
 
 		// Queue next session keys.
 		let (queued_amalgamated, next_changed) = {
@@ -605,6 +611,12 @@ impl<T: Config> Pallet<T> {
 
 			(queued_amalgamated, changed)
 		};
+		log::info!(
+			target: LOG_TARGET,
+			"Queued keys for session {}: {:?}",
+			session_index + 1,
+			queued_amalgamated
+		);
 
 		<QueuedKeys<T>>::put(queued_amalgamated.clone());
 		<QueuedChanged<T>>::put(next_changed);
