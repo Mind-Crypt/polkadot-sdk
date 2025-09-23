@@ -471,9 +471,41 @@ pub mod pallet {
 			}
 		}
 	}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		/// Set the keys for a guardian.
+		#[pallet::call_index(0)]
+		#[pallet::weight(10_000)]
+		pub fn set_keys(origin: OriginFor<T>, keys: T::Keys) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			Self::do_set_keys(&who, keys)?;
+
+			Ok(())
+		}
+	}
 }
 
 impl<T: Config> Pallet<T> {
+	/// Perform the set_key operation, checking for duplicates. Does not set `Changed`.
+	///
+	/// This ensures that the reference counter in system is incremented appropriately and as such
+	/// must accept an account ID, rather than a validator ID.
+	fn do_set_keys(account: &T::AccountId, keys: T::Keys) -> DispatchResult {
+		let who = T::ValidatorIdOf::convert(account.clone())
+			.ok_or(Error::<T>::NoAssociatedValidatorId)?;
+
+		ensure!(frame_system::Pallet::<T>::can_inc_consumer(account), Error::<T>::NoAccount);
+		let old_keys = Self::inner_set_keys(&who, keys)?;
+		if old_keys.is_none() {
+			let assertion = frame_system::Pallet::<T>::inc_consumers(account).is_ok();
+			debug_assert!(assertion, "can_inc_consumer() returned true; no change since; qed");
+		}
+
+		Ok(())
+	}
+
 	/// Perform the set_key operation, checking for duplicates. Does not set `Changed`.
 	///
 	/// The old keys for this guardian are returned, or `None` if there were none.
