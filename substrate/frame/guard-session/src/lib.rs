@@ -461,7 +461,7 @@ pub mod pallet {
 			log::warn!(target: LOG_TARGET, "on_initialize {:?}", n);
 			if T::ShouldEndSession::should_end_session(n) {
 				log::warn!(target: LOG_TARGET, "ending session {:?}", n);
-				Self::rotate_session();
+				Self::rotate_guard_session();
 				T::BlockWeights::get().max_block
 			} else {
 				// NOTE: the non-database part of the weight for `should_end_session(n)` is
@@ -529,9 +529,9 @@ impl<T: Config> Pallet<T> {
 	/// Move on to next session. Register new guardian set and session keys. Changes to the
 	/// guardian set have a session of delay to take effect. This allows for equivocation
 	/// punishment after a fork.
-	pub fn rotate_session() {
+	pub fn rotate_guard_session() {
 		let session_index = <CurrentIndex<T>>::get();
-		log::info!(target: LOG_TARGET, "rotating session {:?}", session_index);
+		log::info!(target: LOG_TARGET, "rotating guard session {:?}", session_index);
 
 		let changed = <QueuedChanged<T>>::get();
 
