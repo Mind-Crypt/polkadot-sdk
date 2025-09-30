@@ -248,21 +248,8 @@ impl<T: Config> ProvingTrie<T> {
 			let mut trie = TrieDBMutBuilderV0::new(&mut db, &mut root).build();
 			for (i, (validator, full_id)) in guardians.into_iter().enumerate() {
 				let i = i as u32;
-				let keys = match <Guardian<T>>::load_keys(&validator) {
-					None => continue,
-					Some(k) => k,
-				};
 
 				let full_id = (validator, full_id);
-
-				// map each key to the owner index.
-				for key_id in T::Keys::key_ids() {
-					let key = keys.get_raw(*key_id);
-					let res =
-						(key_id, key).using_encoded(|k| i.using_encoded(|v| trie.insert(k, v)));
-
-					let _ = res.map_err(|_| "failed to insert into trie")?;
-				}
 
 				// map each owner index to the full identification.
 				let _ = i
@@ -356,17 +343,7 @@ impl<T: Config, D: AsRef<[u8]>> KeyOwnerProofSystem<(KeyTypeId, D)> for Pallet<T
 		let (id, data) = key;
 
 		if proof.session == <Guardian<T>>::current_index() {
-			<Guardian<T>>::key_owner(id, data.as_ref()).and_then(|owner| {
-				T::FullIdentificationOf::convert(owner.clone()).and_then(move |id| {
-					let count = <Guardian<T>>::guardians().len() as ValidatorCount;
-
-					if count != proof.validator_count {
-						return None
-					}
-
-					Some((owner, id))
-				})
-			})
+			None // cannot prove inclusion in the current session.
 		} else {
 			let (root, count) = <HistoricalSessions<T>>::get(&proof.session)?;
 

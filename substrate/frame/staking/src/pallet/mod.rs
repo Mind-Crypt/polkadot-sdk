@@ -547,6 +547,24 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// Similar to `ErasStakers`, this holds the preferences of guardians.
+	///
+	/// This is keyed first by the era index to allow bulk deletion and then the stash account.
+	///
+	/// Is it removed after [`Config::HistoryDepth`] eras.
+	// If prefs hasn't been set or has been removed then 0 commission is returned.
+	#[pallet::storage]
+	#[pallet::getter(fn eras_guardian_prefs)]
+	pub type ErasGuardianPrefs<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		EraIndex,
+		Twox64Concat,
+		T::AccountId,
+		GuardianPrefs,
+		ValueQuery,
+	>;
+
 	/// Similar to `ErasStakers`, this holds the preferences of validators.
 	///
 	/// This is keyed first by the era index to allow bulk deletion and then the stash account.
