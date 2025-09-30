@@ -257,9 +257,6 @@ pub mod pallet {
 
 		/// Handler for managing new session.
 		type SessionManager: SessionManager<Self::GuardianId>;
-
-		/// Handler when a session has changed.
-		type SessionHandler: SessionHandler<Self::GuardianId>;
 	}
 
 	#[pallet::genesis_config]
@@ -366,7 +363,7 @@ impl<T: Config> Pallet<T> {
 		log::info!(target: LOG_TARGET, "rotating guard session {:?}", session_index);
 
 		// Inform the session handlers that a session is going to end.
-		T::SessionHandler::on_before_session_ending();
+		// T::SessionHandler::on_before_session_ending();
 		T::SessionManager::end_session(session_index);
 
 		// Get queued session keys and guardians.
