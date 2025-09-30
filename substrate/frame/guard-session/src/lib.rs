@@ -410,3 +410,38 @@ impl<T: Config> Pallet<T> {
 		// T::SessionHandler::on_new_session::<T::Keys>(changed, &session_keys, &queued_amalgamated);
 	}
 }
+impl<T: Config> OneSessionHandler<T::GuardianId> for Pallet<T> {
+       type Key = GuardianId;
+
+       fn on_before_session_ending() {
+               
+       }
+
+       fn on_disabled(_validator_index: u32) {
+               
+       }
+
+       fn on_genesis_session<'a, I: 'a>(validators: I)
+               where I: Iterator<Item = (&'a T::GuardianId, Self::Key)>,
+                       T::GuardianId: 'a {
+               log::warn!(target: LOG_TARGET, "on_genesis_session");
+               log::info!(
+                       target: LOG_TARGET,
+                       "on_genesis_session called with validators: {:?}",
+                       validators.collect::<Vec<_>>()
+               );
+       }
+
+       fn on_new_session<'a, I: 'a>(changed: bool, validators: I, queued_validators: I)
+               where I: Iterator<Item = (&'a T::GuardianId, Self::Key)>,
+                       T::GuardianId: 'a {
+               log::warn!(target: LOG_TARGET, "on_new_session");
+               log::info!(
+                       target: LOG_TARGET,
+                       "on_new_session called with changed: {}, validators: {:?}, queued_validators: {:?}",
+                       changed,
+                       validators.collect::<Vec<_>>(),
+                       queued_validators.collect::<Vec<_>>()
+               );
+       }
+}
