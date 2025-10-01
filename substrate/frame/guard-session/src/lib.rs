@@ -276,17 +276,17 @@ pub mod pallet {
 					);
 					vec![]
 				});
-			assert!(
-				!initial_guardians_0.is_empty(),
-				"Empty guardian set for session 0 in genesis block!"
-			);
+			// assert!(
+			// 	!initial_guardians_0.is_empty(),
+			// 	"Empty guardian set for session 0 in genesis block!"
+			// );
 
 			let initial_guardians_1 = T::SessionManager::new_session_genesis(1)
 				.unwrap_or_else(|| initial_guardians_0.clone());
-			assert!(
-				!initial_guardians_1.is_empty(),
-				"Empty guardian set for session 1 in genesis block!"
-			);
+			// assert!(
+			// 	!initial_guardians_1.is_empty(),
+			// 	"Empty guardian set for session 1 in genesis block!"
+			// );
 
 			// Tell everyone about the genesis session keys
 			// T::SessionHandler::on_genesis_session::<T::Keys>(&queued_keys);

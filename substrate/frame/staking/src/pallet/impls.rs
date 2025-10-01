@@ -1349,6 +1349,7 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
 		log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} from {}:{}", new_index, file!(), line!());
 		CurrentPlannedSession::<T>::put(new_index);
+		// initialize planning of new session; update intent of existing guardians to guard
 		// Self::new_session(new_index, false).map(|v| v.into_inner())
 		Some(
 			Guardians::<T>::iter()
@@ -1364,10 +1365,15 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 	}
 	fn start_session(start_index: SessionIndex) {
 		log::warn!(target: SEC_LOG_TARGET, "starting guard-session {} from {}:{}", start_index, file!(), line!());
+		// finalize the new list of guardians
+		// update storage of the started session
+		// perform any setup required for the new session
 		// Self::start_session(start_index)
 	}
 	fn end_session(end_index: SessionIndex) {
 		log::warn!(target: SEC_LOG_TARGET, "ending guard-session {} from {}:{}", end_index, file!(), line!());
+		// clear storage of the ended session
+		//  perform payout to guardians
 		// Self::end_session(end_index)
 	}
 }
