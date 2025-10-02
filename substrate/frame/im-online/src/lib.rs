@@ -789,6 +789,12 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
 				).map(|full_id| (id, full_id))
 			})
 			.collect::<Vec<IdentificationTuple<T>>>();
+		log::warn!(
+			target: "runtime::im-online",
+			"Session {:?} ending. Offenders: {:?}",
+			session_index,
+			offenders,
+		);
 
 		// Remove all received heartbeats and number of authored blocks from the
 		// current session, they have already been processed and won't be needed
@@ -809,6 +815,12 @@ impl<T: Config> OneSessionHandler<T::AccountId> for Pallet<T> {
 				sp_runtime::print(e);
 			}
 		}
+		log::warn!(
+			target: "runtime::im-online",
+			"Session {:?} ended. Validators: {:?}",
+			session_index,
+			keys,
+		);
 	}
 
 	fn on_disabled(_i: u32) {
