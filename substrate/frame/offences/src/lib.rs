@@ -127,6 +127,14 @@ where
 		let new_fraction = offence.slash_fraction(offenders_count);
 
 		let slash_perbill: Vec<_> = (0..concurrent_offenders.len()).map(|_| new_fraction).collect();
+		log::warn!(
+			target: LOG_TARGET,
+			"Reporting offence of kind {:?} at session {:?} with {} offenders ({} new).",
+			O::ID,
+			offence.session_index(),
+			offenders_count,
+			slash_perbill.len(),
+		);
 
 		T::OnOffenceHandler::on_offence(
 			&concurrent_offenders,
