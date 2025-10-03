@@ -628,6 +628,13 @@ impl<T: Config> Pallet<T> {
 		};
 
 		if Self::is_online(authority_index) {
+			log::warn!(
+				target: "runtime::im-online",
+				"[index: {:?}] Already online at block: {:?} (session: {:?})",
+				authority_index,
+				block_number,
+				session_index,
+			);
 			return Err(OffchainErr::AlreadyOnline(authority_index))
 		}
 
