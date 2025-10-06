@@ -318,7 +318,8 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn chill_stash(stash: &T::AccountId) {
 		let chilled_as_validator = Self::do_remove_validator(stash);
 		let chilled_as_nominator = Self::do_remove_nominator(stash);
-		if chilled_as_validator || chilled_as_nominator {
+		let chilled_as_guardian = Self::do_remove_guardian(stash);
+		if chilled_as_validator || chilled_as_nominator || chilled_as_guardian {
 			Self::deposit_event(Event::<T>::Chilled { stash: stash.clone() });
 		}
 	}
