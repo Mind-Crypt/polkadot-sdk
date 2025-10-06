@@ -1358,14 +1358,15 @@ impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T> {
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
 		log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} from {}:{}", new_index, file!(), line!());
-		CurrentPlannedSession::<T>::put(new_index);
+		// CurrentPlannedSession::<T>::put(new_index);
 		// initialize planning of new session; update intent of existing guardians to guard
 		// Self::new_session(new_index, false).map(|v| v.into_inner())
 		if new_index > 0 {
 			Self::clear_guard_era_information(new_index - 1);
 		}
 		for (g, prefs) in Guardians::<T>::iter() {
-			ErasGuardianPrefs::<T>::insert(new_index, g, prefs);
+			ErasGuardianPrefs::<T>::insert(new_index, &g, &prefs);
+			log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} guardian {:?} prefs {:?}", new_index, &g, &prefs);
 		}
 		Some(
 			Guardians::<T>::iter()
@@ -1375,7 +1376,7 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 	}
 	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
 		log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} at genesis from {}:{}", new_index, file!(), line!());
-		CurrentPlannedSession::<T>::put(new_index);
+		// CurrentPlannedSession::<T>::put(new_index);
 		// Self::new_session(new_index, true).map(|v| v.into_inner())
 		None
 	}
