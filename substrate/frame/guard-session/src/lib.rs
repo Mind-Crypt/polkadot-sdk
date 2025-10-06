@@ -274,7 +274,7 @@ pub mod pallet {
 						"No initial guardian provided by `SessionManager`, use \
 						session config keys to generate initial guardian set.",
 					);
-					vec![]
+					Vec::new()
 				});
 			// assert!(
 			// 	!initial_guardians_0.is_empty(),
@@ -301,6 +301,16 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn guardians)]
 	pub type Guardians<T: Config> = StorageValue<_, Vec<T::GuardianId>, ValueQuery>;
+
+	/// The upcoming (next) set of guardians.
+	#[pallet::storage]
+	#[pallet::getter(fn next_guardians)]
+	pub type NextGuardians<T: Config> = StorageValue<_, Vec<T::GuardianId>, ValueQuery>;
+
+	/// True if the underlying economic identities or weighting behind the validators
+	/// has changed in the queued validator set.
+	#[pallet::storage]
+	pub type QueuedChanged<T> = StorageValue<_, bool, ValueQuery>;
 
 	/// Current index of the session.
 	#[pallet::storage]
@@ -359,6 +369,7 @@ impl<T: Config> Pallet<T> {
 	/// guardian set have a session of delay to take effect. This allows for equivocation
 	/// punishment after a fork.
 	pub fn rotate_guard_session() {
+		let changed = QueuedChanged::<T>::get();
 		let session_index = <CurrentIndex<T>>::get();
 		log::info!(target: LOG_TARGET, "rotating guard session {:?}", session_index);
 
@@ -367,11 +378,13 @@ impl<T: Config> Pallet<T> {
 		T::SessionManager::end_session(session_index);
 
 		// Get queued session keys and guardians.
+		let next_guardians = NextGuardians::<T>::get();
+		Guardians::<T>::put(&next_guardians);
 
-		// if changed {
-		// 	// reset disabled guardians
-		// 	<DisabledGuardians<T>>::take();
-		// }
+		if changed {
+			// reset disabled guardians
+			<DisabledGuardians<T>>::take();
+		}
 
 		// Increment session index.
 		let session_index = session_index + 1;
@@ -402,6 +415,8 @@ impl<T: Config> Pallet<T> {
 			session_index + 1,
 			next_guardians
 		);
+
+		NextGuardians::<T>::put(&next_guardians);
 
 		// Record that this happened.
 		Self::deposit_event(Event::NewSession { session_index });

@@ -436,6 +436,7 @@ pub struct GuardianPrefs {
 	/// Reward that validator takes up-front; only the rest is split between themselves and
 	/// nominators.
 	pub pub_key: [u8; 32],
+	pub guardian: bool,
 	pub verifier: bool,
 	pub compute: bool,
 	pub compute_prefs: Option<ComputePrefs>,

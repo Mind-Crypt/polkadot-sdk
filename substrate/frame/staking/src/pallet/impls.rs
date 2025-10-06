@@ -745,6 +745,16 @@ impl<T: Config> Pallet<T> {
 		ErasStartSessionIndex::<T>::remove(era_index);
 	}
 
+	/// Clear all era information for given era.
+	pub(crate) fn clear_guard_era_information(era_index: EraIndex) {
+		// FIXME: We can possibly set a reasonable limit since we do this only once per era and
+		// clean up state across multiple blocks.
+		let mut cursor = <ErasGuardianPrefs<T>>::clear_prefix(era_index, u32::MAX, None);
+		debug_assert!(cursor.maybe_cursor.is_none());
+
+		// <ErasGuardianReward<T>>::remove(era_index);
+	}
+
 	/// Apply previously-unapplied slashes on the beginning of a new era, after a delay.
 	fn apply_unapplied_slashes(active_era: EraIndex) {
 		let era_slashes = UnappliedSlashes::<T>::take(&active_era);
@@ -1351,6 +1361,12 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 		CurrentPlannedSession::<T>::put(new_index);
 		// initialize planning of new session; update intent of existing guardians to guard
 		// Self::new_session(new_index, false).map(|v| v.into_inner())
+		if new_index > 0 {
+			Self::clear_guard_era_information(new_index - 1);
+		}
+		for (g, prefs) in Guardians::<T>::iter() {
+			ErasGuardianPrefs::<T>::insert(new_index, g, prefs);
+		}
 		Some(
 			Guardians::<T>::iter()
 				.map(|(g, _)| g)
