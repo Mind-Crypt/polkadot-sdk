@@ -910,6 +910,8 @@ pub mod pallet {
 		ControllerDeprecated,
 		/// Nomination deprecated
 		NominationDeprecated,
+		/// Invalid guardian preferences.
+		InvalidGuardianPrefs,
 	}
 
 	#[pallet::hooks]
@@ -2051,6 +2053,12 @@ pub mod pallet {
 		pub fn guard(origin: OriginFor<T>, prefs: GuardianPrefs) -> DispatchResult {
 			let controller = ensure_signed(origin)?;
 			let ledger = Self::ledger(Controller(controller))?;
+			if prefs.compute {
+				ensure!(
+					prefs.compute_prefs.is_some(),
+					Error::<T>::InvalidGuardianPrefs
+				);
+			}
 
 			ensure!(ledger.active >= MinGuardianBond::<T>::get(), Error::<T>::InsufficientBond);
 			let stash = &ledger.stash;
