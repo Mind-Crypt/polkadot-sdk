@@ -34,7 +34,7 @@ pub fn compute_total_payout<N>(
 	npos_token_staked: N,
 	total_tokens: N,
 	era_duration: u64,
-) -> (N, N)
+) -> (N, N, N)
 where
 	N: AtLeast32BitUnsigned + Clone,
 {
@@ -46,7 +46,9 @@ where
 		yearly_inflation
 			.calculate_for_fraction_times_denominator(npos_token_staked, total_tokens.clone());
 	let maximum = portion * (yearly_inflation.maximum * total_tokens);
-	(payout, maximum)
+	let validator_payout = payout.clone() * N::from(2u32) / N::from(3u32);
+	let guardian_payout = payout.saturating_sub(validator_payout.clone());
+	(validator_payout, guardian_payout, maximum)
 }
 
 #[cfg(test)]
@@ -70,35 +72,35 @@ mod test {
 
 		// check maximum inflation.
 		// not 10_000 due to rounding error.
-		assert_eq!(super::compute_total_payout(&I_NPOS, 0, 100_000u64, YEAR).1, 9_993);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 0, 100_000u64, YEAR).2, 9_993);
 
 		// super::I_NPOS.calculate_for_fraction_times_denominator(25, 100)
-		assert_eq!(super::compute_total_payout(&I_NPOS, 0, 100_000u64, YEAR).0, 2_498);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 5_000, 100_000u64, YEAR).0, 3_248);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 25_000, 100_000u64, YEAR).0, 6_246);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 40_000, 100_000u64, YEAR).0, 8_494);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 50_000, 100_000u64, YEAR).0, 9_993);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 60_000, 100_000u64, YEAR).0, 4_379);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 75_000, 100_000u64, YEAR).0, 2_733);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 95_000, 100_000u64, YEAR).0, 2_513);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 100_000, 100_000u64, YEAR).0, 2_505);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 0, 150_000u64, YEAR).0, 2_498);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 7_500, 150_000u64, YEAR).0, 3_248);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 37_500, 150_000u64, YEAR).0, 6_246);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 60_000, 150_000u64, YEAR).0, 8_494);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 75_000, 150_000u64, YEAR).0, 9_993);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 90_000, 150_000u64, YEAR).0, 4_380);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 112_500, 150_000u64, YEAR).0, 2_733);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 142_500, 150_000u64, YEAR).0, 2_513);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 150_000, 150_000u64, YEAR).0, 2_505);
 
 		const DAY: u64 = 24 * 60 * 60 * 1000;
-		assert_eq!(super::compute_total_payout(&I_NPOS, 25_000, 100_000u64, DAY).0, 17);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 50_000, 100_000u64, DAY).0, 27);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 75_000, 100_000u64, DAY).0, 7);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 37_500, 150_000u64, DAY).0, 17);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 75_000, 150_000u64, DAY).0, 27);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 112_500, 150_000u64, DAY).0, 7);
 
 		const SIX_HOURS: u64 = 6 * 60 * 60 * 1000;
-		assert_eq!(super::compute_total_payout(&I_NPOS, 25_000, 100_000u64, SIX_HOURS).0, 4);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 50_000, 100_000u64, SIX_HOURS).0, 7);
-		assert_eq!(super::compute_total_payout(&I_NPOS, 75_000, 100_000u64, SIX_HOURS).0, 2);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 37_500, 150_000u64, SIX_HOURS).0, 4);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 75_000, 150_000u64, SIX_HOURS).0, 6);
+		assert_eq!(super::compute_total_payout(&I_NPOS, 112_500, 150_000u64, SIX_HOURS).0, 2);
 
 		const HOUR: u64 = 60 * 60 * 1000;
 		assert_eq!(
 			super::compute_total_payout(
 				&I_NPOS,
-				2_500_000_000_000_000_000_000_000_000u128,
-				5_000_000_000_000_000_000_000_000_000u128,
+				3_750_000_000_000_000_000_000_000_000u128,
+				7_500_000_000_000_000_000_000_000_000u128,
 				HOUR
 			)
 			.0,

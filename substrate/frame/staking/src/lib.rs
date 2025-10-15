@@ -934,14 +934,22 @@ impl<Balance: AtLeast32BitUnsigned + Clone + sp_std::fmt::Debug, T: Get<&'static
 			total_issuance,
 			era_duration_millis
 		);
-		let (validator_payout, max_payout) = inflation::compute_total_payout(
+		let (validator_payout, guardian_payout, max_payout) = inflation::compute_total_payout(
 			T::get(),
 			total_staked,
 			total_issuance,
 			// Duration of era; more than u64::MAX is rewarded as u64::MAX.
 			era_duration_millis,
 		);
-		let rest = max_payout.saturating_sub(validator_payout.clone());
+		let rest = max_payout.clone().saturating_sub(validator_payout.clone()).saturating_sub(guardian_payout.clone());
+		log::warn!(
+			target: "runtime::staking",
+			"validator_payout: {:?}, guardian_payout: {:?}, max_payout: {:?}, rest: {:?}",
+			validator_payout,
+			guardian_payout,
+			max_payout,
+			rest
+		);
 		(validator_payout, rest)
 	}
 }
