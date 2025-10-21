@@ -156,6 +156,12 @@ impl<T: Config> Pallet<T> {
 		validator_stash: T::AccountId,
 		era: EraIndex,
 	) -> DispatchResultWithPostInfo {
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"payout_stakers called for validator: {:?}, era: {:?}",
+			validator_stash,
+			era
+		);
 		let controller = Self::bonded(&validator_stash).ok_or_else(|| {
 			Error::<T>::NotStash.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		})?;
@@ -174,11 +180,24 @@ impl<T: Config> Pallet<T> {
 		era: EraIndex,
 		page: Page,
 	) -> DispatchResultWithPostInfo {
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"payout_stakers_by_page called for validator: {:?}, era: {:?}, page: {:?}",
+			validator_stash,
+			era,
+			page
+		);
 		// Validate input data
 		let current_era = CurrentEra::<T>::get().ok_or_else(|| {
 			Error::<T>::InvalidEraToReward
 				.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		})?;
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"current_era: {:?}, requested era: {:?}",
+			current_era,
+			era
+		);
 
 		let history_depth = T::HistoryDepth::get();
 		ensure!(
@@ -191,6 +210,13 @@ impl<T: Config> Pallet<T> {
 			page < EraInfo::<T>::get_page_count(era, &validator_stash),
 			Error::<T>::InvalidPage.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		);
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"page {:?} is valid for era {:?} and validator {:?}",
+			page,
+			era,
+			validator_stash
+		);
 
 		// Note: if era has no reward to be claimed, era may be future. better not to update
 		// `ledger.legacy_claimed_rewards` in this case.
@@ -198,6 +224,12 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::InvalidEraToReward
 				.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		})?;
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"era_payout for era {:?} is {:?}",
+			era,
+			era_payout
+		);
 
 		let account = StakingAccount::Stash(validator_stash.clone());
 		let mut ledger = Self::ledger(account.clone()).or_else(|_| {
@@ -213,6 +245,11 @@ impl<T: Config> Pallet<T> {
 			.legacy_claimed_rewards
 			.retain(|&x| x >= current_era.saturating_sub(history_depth));
 		ledger.clone().update()?;
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"ledger fetched for validator {:?}",
+			validator_stash
+		);
 
 		let stash = ledger.stash.clone();
 
@@ -222,11 +259,26 @@ impl<T: Config> Pallet<T> {
 		} else {
 			EraInfo::<T>::set_rewards_as_claimed(era, &stash, page);
 		}
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"rewards for era {:?}, validator {:?}, page {:?} marked as claimed",
+			era,
+			validator_stash,
+			page
+		);
 
 		let exposure = EraInfo::<T>::get_paged_exposure(era, &stash, page).ok_or_else(|| {
 			Error::<T>::InvalidEraToReward
 				.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		})?;
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"exposure for era {:?}, validator {:?}, page {:?} is {:?}",
+			era,
+			validator_stash,
+			page,
+			exposure
+		);
 
 		// Input data seems good, no errors allowed after this point
 
@@ -241,6 +293,15 @@ impl<T: Config> Pallet<T> {
 		let total_reward_points = era_reward_points.total;
 		let validator_reward_points =
 			era_reward_points.individual.get(&stash).copied().unwrap_or_else(Zero::zero);
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"era_reward_points for era {:?} is {:?}, total_reward_points: {:?}, validator_reward_points for validator {:?} is {:?}",
+			era,
+			era_reward_points,
+			total_reward_points,
+			validator_stash,
+			validator_reward_points
+		);
 
 		// Nothing to do if they have no reward points.
 		if validator_reward_points.is_zero() {
@@ -267,6 +328,15 @@ impl<T: Config> Pallet<T> {
 		let page_stake_part = Perbill::from_rational(exposure.page_total(), exposure.total());
 		// validator commission is paid out in fraction across pages proportional to the page stake.
 		let validator_commission_payout = page_stake_part * validator_total_commission_payout;
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"validator_total_payout: {:?}, validator_total_commission_payout: {:?}, validator_leftover_payout: {:?}, validator_staking_payout: {:?}, validator_commission_payout: {:?}",
+			validator_total_payout,
+			validator_total_commission_payout,
+			validator_leftover_payout,
+			validator_staking_payout,
+			validator_commission_payout
+		);
 
 		Self::deposit_event(Event::<T>::PayoutStarted {
 			era_index: era,
@@ -310,6 +380,14 @@ impl<T: Config> Pallet<T> {
 
 		T::Reward::on_unbalanced(total_imbalance);
 		debug_assert!(nominator_payout_count <= T::MaxExposurePageSize::get());
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"payout_stakers_by_page completed for validator: {:?}, era: {:?}, page: {:?}, nominator_payout_count: {:?}",
+			validator_stash,
+			era,
+			page,
+			nominator_payout_count
+		);
 
 		Ok(Some(T::WeightInfo::payout_stakers_alive_staked(nominator_payout_count)).into())
 	}
