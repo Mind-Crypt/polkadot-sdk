@@ -57,6 +57,7 @@ use super::pallet::*;
 use frame_support::ensure;
 #[cfg(any(test, feature = "try-runtime"))]
 use sp_runtime::TryRuntimeError;
+use sp_staking::StakerStatus;
 
 /// The maximum number of iterations that we do whilst iterating over `T::VoterList` in
 /// `get_npos_voters`.
@@ -288,6 +289,9 @@ impl<T: Config> Pallet<T> {
 		//
 		// Then look at the validator, figure out the proportion of their reward
 		// which goes to them and each of their nominators.
+		if Self::status(&validator_stash) == Ok(StakerStatus::Guardian) {
+			return Self::do_payout_guardian(stash.clone(), era);
+		}
 
 		let era_reward_points = <ErasRewardPoints<T>>::get(&era);
 		let total_reward_points = era_reward_points.total;
@@ -390,6 +394,60 @@ impl<T: Config> Pallet<T> {
 		);
 
 		Ok(Some(T::WeightInfo::payout_stakers_alive_staked(nominator_payout_count)).into())
+	}
+
+	pub(super) fn do_payout_guardian(stash: T::AccountId, era: EraIndex) -> DispatchResultWithPostInfo {
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"payout_guardian called for stash: {:?}, era: {:?}",
+			stash,
+			era
+		);
+
+		let era_payout = <ErasGuardianReward<T>>::get(&era).unwrap_or_default();
+		let era_reward_points = <ErasGuardianPoints<T>>::get(&era);
+		let total_reward_points = era_reward_points.total;
+		let guardian_reward_points =
+			era_reward_points.individual.get(&stash).copied().unwrap_or_else(Zero::zero);
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"era_reward_points for era {:?} is {:?}, total_reward_points: {:?}, guardian_reward_points for stash {:?} is {:?}",
+			era,
+			era_reward_points,
+			total_reward_points,
+			stash,
+			guardian_reward_points
+		);
+
+		// Nothing to do if they have no reward points.
+		if guardian_reward_points.is_zero() {
+			return Ok(Some(T::WeightInfo::payout_stakers_alive_staked(0)).into())
+		}
+
+		let guardian_total_reward_part =
+			Perbill::from_rational(guardian_reward_points, total_reward_points);
+		let guardian_total_payout = guardian_total_reward_part * era_payout;
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"guardian_total_payout for stash {:?} in era {:?} is {:?}",
+			stash,
+			era,
+			guardian_total_payout
+		);
+
+		let mut total_imbalance = PositiveImbalanceOf::<T>::zero();
+		if let Some((imbalance, dest)) = Self::make_payout(&stash, guardian_total_payout) {
+			Self::deposit_event(Event::<T>::Rewarded {
+				stash: stash.clone(),
+				dest,
+				amount: imbalance.peek(),
+			});
+			total_imbalance.subsume(imbalance);
+		}
+
+		T::Reward::on_unbalanced(total_imbalance);
+
+		Ok(Some(T::WeightInfo::payout_stakers_alive_staked(1)).into())
 	}
 
 	/// Chill a stash account.
@@ -584,18 +642,21 @@ impl<T: Config> Pallet<T> {
 			let era_duration = (now_as_millis_u64.defensive_saturating_sub(active_era_start))
 				.saturated_into::<u64>();
 			let staked = Self::eras_total_stake(&active_era.index);
+			let guardian_stake = Self::eras_guardian_stake(&active_era.index);
 			let issuance = T::Currency::total_issuance();
-			let (validator_payout, remainder) =
-				T::EraPayout::era_payout(staked, issuance, era_duration);
+			let (validator_payout, guardian_payout, remainder) =
+				T::EraPayout::era_payout(staked, guardian_stake, issuance, era_duration);
 
 			Self::deposit_event(Event::<T>::EraPaid {
 				era_index: active_era.index,
 				validator_payout,
+				guardian_payout,
 				remainder,
 			});
 
 			// Set ending era reward.
 			<ErasValidatorReward<T>>::insert(&active_era.index, validator_payout);
+			<ErasGuardianReward<T>>::insert(&active_era.index, guardian_payout);
 			T::RewardRemainder::on_unbalanced(T::Currency::issue(remainder));
 
 			// Clear offending validators.
@@ -831,7 +892,8 @@ impl<T: Config> Pallet<T> {
 		let mut cursor = <ErasGuardianPrefs<T>>::clear_prefix(era_index, u32::MAX, None);
 		debug_assert!(cursor.maybe_cursor.is_none());
 
-		// <ErasGuardianReward<T>>::remove(era_index);
+		<ErasGuardianReward<T>>::remove(era_index);
+		<ErasGuardianPoints<T>>::remove(era_index);
 	}
 
 	/// Apply previously-unapplied slashes on the beginning of a new era, after a delay.
@@ -865,6 +927,21 @@ impl<T: Config> Pallet<T> {
 			<ErasRewardPoints<T>>::mutate(active_era.index, |era_rewards| {
 				for (validator, points) in validators_points.into_iter() {
 					*era_rewards.individual.entry(validator).or_default() += points;
+					era_rewards.total += points;
+				}
+			});
+		}
+	}
+
+	pub fn reward_guardian_by_ids(guardians_points: impl IntoIterator<Item = (T::AccountId, u32)>) {
+		log::warn!(
+			target: SEC_LOG_TARGET,
+			"reward_guardian_by_ids called"
+		);
+		if let Some(active_era) = Self::active_era() {
+			<ErasGuardianPoints<T>>::mutate(active_era.index, |era_rewards| {
+				for (guardian, points) in guardians_points.into_iter() {
+					*era_rewards.individual.entry(guardian).or_default() += points;
 					era_rewards.total += points;
 				}
 			});
@@ -1443,10 +1520,18 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 		if new_index > 0 {
 			Self::clear_guard_era_information(new_index - 1);
 		}
+		let mut guardians_to_pay = Vec::new();
+		let mut total_guardian_stake: BalanceOf<T> = Zero::zero();
 		for (g, prefs) in Guardians::<T>::iter() {
 			ErasGuardianPrefs::<T>::insert(new_index, &g, &prefs);
-			log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} guardian {:?} prefs {:?}", new_index, &g, &prefs);
+			let stake = Self::stake(&g).unwrap_or_default();
+			total_guardian_stake = total_guardian_stake.saturating_add(stake.active);
+			guardians_to_pay.push((g.clone(), 10u32)); // give each guardian 10 points for now
+			log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} guardian {:?} stake {:?}, active {:?}", new_index, g, stake, stake.active);
 		}
+		Self::reward_guardian_by_ids(guardians_to_pay);
+		EraInfo::<T>::set_guardians_stake(new_index, total_guardian_stake);
+		log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} total_guardian_stake {:?}", new_index, total_guardian_stake);
 		Some(
 			Guardians::<T>::iter()
 				.map(|(g, _)| g)
@@ -1469,7 +1554,6 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 	fn end_session(end_index: SessionIndex) {
 		log::warn!(target: SEC_LOG_TARGET, "ending guard-session {} from {}:{}", end_index, file!(), line!());
 		// clear storage of the ended session
-		//  perform payout to guardians
 		// Self::end_session(end_index)
 	}
 }

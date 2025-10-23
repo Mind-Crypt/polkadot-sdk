@@ -605,6 +605,28 @@ pub mod pallet {
 	pub type ErasTotalStake<T: Config> =
 		StorageMap<_, Twox64Concat, EraIndex, BalanceOf<T>, ValueQuery>;
 
+	/// The total guardian era payout for the last [`Config::HistoryDepth`] eras.
+	///
+	/// Eras that haven't finished yet or has been removed doesn't have reward.
+	#[pallet::storage]
+	#[pallet::getter(fn eras_guardian_reward)]
+	pub type ErasGuardianReward<T: Config> = StorageMap<_, Twox64Concat, EraIndex, BalanceOf<T>>;
+
+	/// Rewards for the last [`Config::HistoryDepth`] eras.
+	/// If points hasn't been set or has been removed then 0 points is returned.
+	#[pallet::storage]
+	#[pallet::unbounded]
+	#[pallet::getter(fn eras_guardian_points)]
+	pub type ErasGuardianPoints<T: Config> =
+		StorageMap<_, Twox64Concat, EraIndex, EraRewardPoints<T::AccountId>, ValueQuery>;
+
+	/// The total amount staked for the last [`Config::HistoryDepth`] eras.
+	/// If total hasn't been set or has been removed then 0 stake is returned.
+	#[pallet::storage]
+	#[pallet::getter(fn eras_guardian_stake)]
+	pub type ErasGuardianStake<T: Config> =
+		StorageMap<_, Twox64Concat, EraIndex, BalanceOf<T>, ValueQuery>;
+
 	/// Mode of era forcing.
 	#[pallet::storage]
 	#[pallet::getter(fn force_era)]
@@ -797,8 +819,8 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// The era payout has been set; the first balance is the validator-payout; the second is
-		/// the remainder from the maximum amount of reward.
-		EraPaid { era_index: EraIndex, validator_payout: BalanceOf<T>, remainder: BalanceOf<T> },
+		/// the guardian-payout; the third is the remainder from the maximum amount of reward.
+		EraPaid { era_index: EraIndex, validator_payout: BalanceOf<T>, guardian_payout: BalanceOf<T>, remainder: BalanceOf<T> },
 		/// The nominator has been rewarded by this amount to this destination.
 		Rewarded {
 			stash: T::AccountId,

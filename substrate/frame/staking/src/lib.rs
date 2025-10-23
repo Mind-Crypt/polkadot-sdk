@@ -901,18 +901,20 @@ pub trait EraPayout<Balance> {
 	/// paid out ("the rest").
 	fn era_payout(
 		total_staked: Balance,
+		guardian_stake: Balance,
 		total_issuance: Balance,
 		era_duration_millis: u64,
-	) -> (Balance, Balance);
+	) -> (Balance, Balance, Balance);
 }
 
 impl<Balance: Default> EraPayout<Balance> for () {
 	fn era_payout(
 		_total_staked: Balance,
+		_guardian_stake: Balance,
 		_total_issuance: Balance,
 		_era_duration_millis: u64,
-	) -> (Balance, Balance) {
-		(Default::default(), Default::default())
+	) -> (Balance, Balance, Balance) {
+		(Default::default(), Default::default(), Default::default())
 	}
 }
 
@@ -924,13 +926,15 @@ impl<Balance: AtLeast32BitUnsigned + Clone + sp_std::fmt::Debug, T: Get<&'static
 {
 	fn era_payout(
 		total_staked: Balance,
+		guardian_stake: Balance,
 		total_issuance: Balance,
 		era_duration_millis: u64,
-	) -> (Balance, Balance) {
+	) -> (Balance, Balance, Balance) {
 		log::warn!(
 			target: "runtime::staking",
-			"total_staked: {:?}, total_issuance: {:?}, era_duration_millis: {:?}",
+			"total_staked: {:?}, guardian_stake: {:?}, total_issuance: {:?}, era_duration_millis: {:?}",
 			total_staked,
+			guardian_stake,
 			total_issuance,
 			era_duration_millis
 		);
@@ -950,7 +954,11 @@ impl<Balance: AtLeast32BitUnsigned + Clone + sp_std::fmt::Debug, T: Get<&'static
 			max_payout,
 			rest
 		);
-		(validator_payout, rest)
+		if guardian_stake.is_zero() {
+			return (validator_payout.saturating_add(guardian_payout), Zero::zero(), rest)
+		} else {
+			return (validator_payout, guardian_payout, rest)
+		};
 	}
 }
 
@@ -1232,6 +1240,11 @@ impl<T: Config> EraInfo<T> {
 	/// Store total exposure for all the elected validators in the era.
 	pub(crate) fn set_total_stake(era: EraIndex, total_stake: BalanceOf<T>) {
 		<ErasTotalStake<T>>::insert(era, total_stake);
+	}
+
+	/// Store total exposure for all the elected validators in the era.
+	pub(crate) fn set_guardians_stake(era: EraIndex, total_stake: BalanceOf<T>) {
+		<ErasGuardianStake<T>>::insert(era, total_stake);
 	}
 }
 

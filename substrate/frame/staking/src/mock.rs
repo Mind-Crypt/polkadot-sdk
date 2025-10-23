@@ -677,8 +677,9 @@ pub(crate) fn start_active_era(era_index: EraIndex) {
 }
 
 pub(crate) fn current_total_payout_for_duration(duration: u64) -> Balance {
-	let (payout, _rest) = <Test as Config>::EraPayout::era_payout(
+	let (payout, sec_payout, _rest) = <Test as Config>::EraPayout::era_payout(
 		Staking::eras_total_stake(active_era()),
+		0,
 		Balances::total_issuance(),
 		duration,
 	);
@@ -687,12 +688,13 @@ pub(crate) fn current_total_payout_for_duration(duration: u64) -> Balance {
 }
 
 pub(crate) fn maximum_payout_for_duration(duration: u64) -> Balance {
-	let (payout, rest) = <Test as Config>::EraPayout::era_payout(
+	let (payout, sec_payout, rest) = <Test as Config>::EraPayout::era_payout(
 		Staking::eras_total_stake(active_era()),
+		0,
 		Balances::total_issuance(),
 		duration,
 	);
-	payout + rest
+	payout + sec_payout + rest
 }
 
 /// Time it takes to finish a session.
