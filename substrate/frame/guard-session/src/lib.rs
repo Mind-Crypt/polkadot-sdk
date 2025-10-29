@@ -118,6 +118,15 @@ impl<A> SessionManager<A> for () {
 	fn end_session(_: SessionIndex) {}
 }
 
+/// Implementors of this trait provide information about whether or not some guardian has
+/// been registered with them. The [Session module](../../pallet_session/index.html) is an
+/// implementor.
+pub trait GuardianRegistration<GuardianId> {
+	/// Returns true if the provided guardian ID has been registered with the implementing runtime
+	/// module
+	fn is_registered(id: &GuardianId) -> bool;
+}
+
 /// Handler for session life cycle events.
 pub trait SessionHandler<GuardianId> {
 	/// All the key type ids this session handler can process.
@@ -257,6 +266,9 @@ pub mod pallet {
 
 		/// Handler for managing new session.
 		type SessionManager: SessionManager<Self::GuardianId>;
+
+		/// Validate a guardian's registration status.
+		type GuardianRegistration: GuardianRegistration<Self::GuardianId>;
 	}
 
 	#[pallet::genesis_config]
@@ -409,6 +421,20 @@ impl<T: Config> Pallet<T> {
 			} else {
 				(Guardians::<T>::get(), false)
 			};
+		// Filter out any guardian that has no session keys returned by `load_keys`.
+		let next_guardians: Vec<_> = next_guardians
+			.into_iter()
+			.filter_map(|g| {
+				let loaded = T::GuardianRegistration::is_registered(&g);
+				// treat empty result as "no keys" and discard the guardian
+				if !loaded {
+					log::warn!(target: LOG_TARGET, "discarding guardian with no session keys: {:?}", g);
+					None
+				} else {
+					Some(g)
+				}
+			})
+			.collect();
 		log::info!(
 			target: LOG_TARGET,
 			"Next guardian set for session {}: {:?}",

@@ -127,6 +127,7 @@ use frame_support::{
 	Parameter,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
+use pallet_guard_session::GuardianRegistration;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, Convert, Member, One, OpaqueKeys, Zero},
 	ConsensusEngineId, DispatchError, KeyTypeId, Permill, RuntimeAppPublic,
@@ -890,6 +891,12 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> ValidatorRegistration<T::ValidatorId> for Pallet<T> {
+	fn is_registered(id: &T::ValidatorId) -> bool {
+		Self::load_keys(id).is_some()
+	}
+}
+
+impl<T: Config> GuardianRegistration<T::ValidatorId> for Pallet<T> {
 	fn is_registered(id: &T::ValidatorId) -> bool {
 		Self::load_keys(id).is_some()
 	}

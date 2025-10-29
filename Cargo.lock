@@ -10687,6 +10687,7 @@ dependencies = [
  "frame-system",
  "impl-trait-for-tuples",
  "log",
+ "pallet-guard-session",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
