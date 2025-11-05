@@ -314,6 +314,14 @@ pub mod pallet {
 	#[pallet::getter(fn guardians)]
 	pub type Guardians<T: Config> = StorageValue<_, Vec<T::GuardianId>, ValueQuery>;
 
+	/// Where the guardian services are running. Keyed by nodeid.
+	///
+	/// TWOX-NOTE: SAFE since `AccountId` is a secure hash.
+	#[pallet::storage]
+	#[pallet::getter(fn worker)]
+	pub type Worker<T: Config> =
+		StorageMap<_, Twox64Concat, [u8; 32], T::AccountId, OptionQuery>;
+
 	/// The upcoming (next) set of guardians.
 	#[pallet::storage]
 	#[pallet::getter(fn next_guardians)]
@@ -372,6 +380,36 @@ pub mod pallet {
 				// cache.
 				Weight::zero()
 			}
+		}
+	}
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		/// Take the origin account as a stash and lock up `value` of its balance. `controller` will
+		/// be the account that controls it.
+		///
+		/// `value` must be more than the `minimum_balance` specified by `T::Currency`.
+		///
+		/// The dispatch origin for this call must be _Signed_ by the stash account.
+		///
+		/// Emits `Bonded`.
+		/// ## Complexity
+		/// - Independent of the arguments. Moderate complexity.
+		/// - O(1).
+		/// - Three extra DB entries.
+		///
+		/// NOTE: Two of the storage writes (`Self::bonded`, `Self::payee`) are _never_ cleaned
+		/// unless the `origin` falls below _existential deposit_ and gets removed as dust.
+		#[pallet::call_index(0)]
+		#[pallet::weight(Weight::from_parts(16_980_000, 4556))]
+		pub fn set_worker(
+			origin: OriginFor<T>,
+			nodeid: [u8; 32],
+		) -> DispatchResult {
+			let controller = ensure_signed(origin)?;
+			<Worker<T>>::insert(nodeid, controller);
+
+			Ok(())
 		}
 	}
 }
@@ -451,6 +489,7 @@ impl<T: Config> Pallet<T> {
 		// T::SessionHandler::on_new_session::<T::Keys>(changed, &session_keys, &queued_amalgamated);
 	}
 }
+
 impl<T: Config> OneSessionHandler<T::GuardianId> for Pallet<T> {
        type Key = GuardianId;
 
