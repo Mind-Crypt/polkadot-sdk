@@ -1529,8 +1529,8 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 		// CurrentPlannedSession::<T>::put(new_index);
 		// initialize planning of new session; update intent of existing guardians to guard
 		// Self::new_session(new_index, false).map(|v| v.into_inner())
-		if new_index > 0 {
-			Self::clear_guard_era_information(new_index - 1);
+		if let Some(old_era) = CurrentEra::<T>::get().unwrap_or(0).checked_sub(T::HistoryDepth::get() + 1) {
+			Self::clear_guard_era_information(old_era);
 		}
 		let mut guardians_to_pay = Vec::new();
 		let mut total_guardian_stake: BalanceOf<T> = Zero::zero();
