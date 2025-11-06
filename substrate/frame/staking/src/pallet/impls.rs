@@ -49,7 +49,11 @@ use sp_staking::{
 use sp_std::prelude::*;
 
 use crate::{
-	election_size_tracker::StaticTracker, log, slashing, weights::WeightInfo, ActiveEraInfo, BalanceOf, EraInfo, EraPayout, Exposure, ExposureOf, Forcing, GuardianPrefs, IndividualExposure, MaxNominationsOf, MaxWinnersOf, Nominations, NominationsQuota, PositiveImbalanceOf, RewardDestination, SessionInterface, StakingLedger, ValidatorPrefs, SEC_LOG_TARGET
+	election_size_tracker::StaticTracker, log, slashing, weights::WeightInfo, ActiveEraInfo,
+	BalanceOf, EraInfo, EraPayout, Exposure, ExposureOf, Forcing, GuardianPrefs,
+	IndividualExposure, MaxNominationsOf, MaxWinnersOf, Nominations, NominationsQuota,
+	PositiveImbalanceOf, RewardDestination, SessionInterface, StakingLedger, ValidatorPrefs,
+	SEC_LOG_TARGET,
 };
 
 use super::pallet::*;
@@ -158,12 +162,6 @@ impl<T: Config> Pallet<T> {
 		validator_stash: T::AccountId,
 		era: EraIndex,
 	) -> DispatchResultWithPostInfo {
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"payout_stakers called for validator: {:?}, era: {:?}",
-			validator_stash,
-			era
-		);
 		let controller = Self::bonded(&validator_stash).ok_or_else(|| {
 			Error::<T>::NotStash.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		})?;
@@ -182,24 +180,11 @@ impl<T: Config> Pallet<T> {
 		era: EraIndex,
 		page: Page,
 	) -> DispatchResultWithPostInfo {
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"payout_stakers_by_page called for validator: {:?}, era: {:?}, page: {:?}",
-			validator_stash,
-			era,
-			page
-		);
 		// Validate input data
 		let current_era = CurrentEra::<T>::get().ok_or_else(|| {
 			Error::<T>::InvalidEraToReward
 				.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		})?;
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"current_era: {:?}, requested era: {:?}",
-			current_era,
-			era
-		);
 
 		let history_depth = T::HistoryDepth::get();
 		ensure!(
@@ -212,13 +197,6 @@ impl<T: Config> Pallet<T> {
 			page < EraInfo::<T>::get_page_count(era, &validator_stash),
 			Error::<T>::InvalidPage.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		);
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"page {:?} is valid for era {:?} and validator {:?}",
-			page,
-			era,
-			validator_stash
-		);
 
 		// Note: if era has no reward to be claimed, era may be future. better not to update
 		// `ledger.legacy_claimed_rewards` in this case.
@@ -226,12 +204,6 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::InvalidEraToReward
 				.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		})?;
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"era_payout for era {:?} is {:?}",
-			era,
-			era_payout
-		);
 
 		let account = StakingAccount::Stash(validator_stash.clone());
 		let mut ledger = Self::ledger(account.clone()).or_else(|_| {
@@ -247,11 +219,6 @@ impl<T: Config> Pallet<T> {
 			.legacy_claimed_rewards
 			.retain(|&x| x >= current_era.saturating_sub(history_depth));
 		ledger.clone().update()?;
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"ledger fetched for validator {:?}",
-			validator_stash
-		);
 
 		let stash = ledger.stash.clone();
 
@@ -261,26 +228,11 @@ impl<T: Config> Pallet<T> {
 		} else {
 			EraInfo::<T>::set_rewards_as_claimed(era, &stash, page);
 		}
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"rewards for era {:?}, validator {:?}, page {:?} marked as claimed",
-			era,
-			validator_stash,
-			page
-		);
 
 		let exposure = EraInfo::<T>::get_paged_exposure(era, &stash, page).ok_or_else(|| {
 			Error::<T>::InvalidEraToReward
 				.with_weight(T::WeightInfo::payout_stakers_alive_staked(0))
 		})?;
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"exposure for era {:?}, validator {:?}, page {:?} is {:?}",
-			era,
-			validator_stash,
-			page,
-			exposure
-		);
 
 		// Input data seems good, no errors allowed after this point
 
@@ -298,15 +250,6 @@ impl<T: Config> Pallet<T> {
 		let total_reward_points = era_reward_points.total;
 		let validator_reward_points =
 			era_reward_points.individual.get(&stash).copied().unwrap_or_else(Zero::zero);
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"era_reward_points for era {:?} is {:?}, total_reward_points: {:?}, validator_reward_points for validator {:?} is {:?}",
-			era,
-			era_reward_points,
-			total_reward_points,
-			validator_stash,
-			validator_reward_points
-		);
 
 		// Nothing to do if they have no reward points.
 		if validator_reward_points.is_zero() {
@@ -333,15 +276,6 @@ impl<T: Config> Pallet<T> {
 		let page_stake_part = Perbill::from_rational(exposure.page_total(), exposure.total());
 		// validator commission is paid out in fraction across pages proportional to the page stake.
 		let validator_commission_payout = page_stake_part * validator_total_commission_payout;
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"validator_total_payout: {:?}, validator_total_commission_payout: {:?}, validator_leftover_payout: {:?}, validator_staking_payout: {:?}, validator_commission_payout: {:?}",
-			validator_total_payout,
-			validator_total_commission_payout,
-			validator_leftover_payout,
-			validator_staking_payout,
-			validator_commission_payout
-		);
 
 		Self::deposit_event(Event::<T>::PayoutStarted {
 			era_index: era,
@@ -385,56 +319,29 @@ impl<T: Config> Pallet<T> {
 
 		T::Reward::on_unbalanced(total_imbalance);
 		debug_assert!(nominator_payout_count <= T::MaxExposurePageSize::get());
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"payout_stakers_by_page completed for validator: {:?}, era: {:?}, page: {:?}, nominator_payout_count: {:?}",
-			validator_stash,
-			era,
-			page,
-			nominator_payout_count
-		);
 
 		Ok(Some(T::WeightInfo::payout_stakers_alive_staked(nominator_payout_count)).into())
 	}
 
-	pub(super) fn do_payout_guardian(stash: T::AccountId, era: EraIndex) -> DispatchResultWithPostInfo {
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"payout_guardian called for stash: {:?}, era: {:?}",
-			stash,
-			era
-		);
+	pub(super) fn do_payout_guardian(
+		stash: T::AccountId,
+		era: EraIndex,
+	) -> DispatchResultWithPostInfo {
 
-		let era_payout = <ErasGuardianReward<T>>::get(&era).unwrap_or_default();
-		let era_reward_points = <ErasGuardianPoints<T>>::get(&era);
+		let era_payout = Self::eras_guardian_reward(&era).unwrap_or_default();
+		let total_guardian_stake = Self::eras_guardian_stake(&era);
+		let era_reward_points = Self::eras_guardian_points(&era);
 		let total_reward_points = era_reward_points.total;
 		let guardian_reward_points =
 			era_reward_points.individual.get(&stash).copied().unwrap_or_else(Zero::zero);
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"era_reward_points for era {:?} is {:?}, total_reward_points: {:?}, guardian_reward_points for stash {:?} is {:?}",
-			era,
-			era_reward_points,
-			total_reward_points,
-			stash,
-			guardian_reward_points
-		);
 
 		// Nothing to do if they have no reward points.
-		if guardian_reward_points.is_zero() {
+		if guardian_reward_points.is_zero() || era_payout.is_zero() {
 			return Ok(Some(T::WeightInfo::payout_stakers_alive_staked(0)).into())
 		}
 
-		let guardian_total_reward_part =
-			Perbill::from_rational(guardian_reward_points, total_reward_points);
+		let guardian_total_reward_part = Perbill::from_parts(guardian_reward_points);
 		let guardian_total_payout = guardian_total_reward_part * era_payout;
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"guardian_total_payout for stash {:?} in era {:?} is {:?}",
-			stash,
-			era,
-			guardian_total_payout
-		);
 
 		let mut total_imbalance = PositiveImbalanceOf::<T>::zero();
 		if let Some((imbalance, dest)) = Self::make_payout(&stash, guardian_total_payout) {
@@ -551,7 +458,6 @@ impl<T: Config> Pallet<T> {
 
 	/// Start a session potentially starting an era.
 	fn start_session(start_session: SessionIndex) {
-		log!(warn, "starting session {} from {}:{}", start_session, file!(), line!());
 		let next_active_era = Self::active_era().map(|e| e.index + 1).unwrap_or(0);
 		// This is only `Some` when current era has already progressed to the next era, while the
 		// active era is one behind (i.e. in the *last session of the active era*, or *first session
@@ -579,7 +485,6 @@ impl<T: Config> Pallet<T> {
 
 	/// End a session potentially ending an era.
 	fn end_session(session_index: SessionIndex) {
-		log!(warn, "ending session {} from {}:{}", session_index, file!(), line!());
 		if let Some(active_era) = Self::active_era() {
 			if let Some(next_active_era_start_session_index) =
 				Self::eras_start_session_index(active_era.index + 1)
@@ -596,7 +501,6 @@ impl<T: Config> Pallet<T> {
 	/// * reset `active_era.start`,
 	/// * update `BondedEras` and apply slashes.
 	fn start_era(start_session: SessionIndex) {
-		log!(warn, "Starting new era at session {}", start_session);
 		let active_era = ActiveEra::<T>::mutate(|active_era| {
 			let new_index = active_era.as_ref().map(|info| info.index + 1).unwrap_or(0);
 			*active_era = Some(ActiveEraInfo {
@@ -635,7 +539,6 @@ impl<T: Config> Pallet<T> {
 
 	/// Compute payout for era.
 	fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
-		log!(warn, "Ending era {}", active_era.index);
 		// Note: active_era_start can be None if end era is called during genesis config.
 		if let Some(active_era_start) = active_era.start {
 			let now_as_millis_u64 = T::UnixTime::now().as_millis().saturated_into::<u64>();
@@ -934,19 +837,84 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub fn reward_guardian_by_ids(guardians_points: impl IntoIterator<Item = (T::AccountId, u32)>) {
-		log::warn!(
-			target: SEC_LOG_TARGET,
-			"reward_guardian_by_ids called"
-		);
-		if let Some(active_era) = Self::active_era() {
-			<ErasGuardianPoints<T>>::mutate(active_era.index, |era_rewards| {
-				for (guardian, points) in guardians_points.into_iter() {
-					*era_rewards.individual.entry(guardian).or_default() += points;
-					era_rewards.total += points;
-				}
-			});
+	pub fn new_guard_session(index: SessionIndex, is_genesis: bool) -> Option<Vec<T::AccountId>> {
+		let current_era = if let Some(mut current_era) = Self::current_era() {
+			// initial era is set -> initial era after pallet-session
+			let current_era_start_session_index = Self::eras_start_session_index(current_era)
+				.unwrap_or_else(|| {
+					frame_support::print("Error: start_session_index must be set for current_era");
+					0
+				});
+
+			if index <= current_era_start_session_index {
+				// pallet-session has already acted and updated indices ^^
+				current_era = current_era.saturating_sub(1)
+			} else if index.saturating_sub(current_era_start_session_index) < T::SessionsPerEra::get() {
+				// era length not reached
+				return None;
+			}
+
+			// TODO: enable forcing guardian session
+			current_era
+		} else {
+			// initial era is not set
+			0
+		};
+
+		// All in-line with new era. TODO: Elect guardians
+		let mut std_guardians = 0;
+		let mut compute = 0u16;
+		let mut verifier = 0u16;
+		let guardians = Guardians::<T>::iter()
+			.map(|(g, p)| {
+				std_guardians += if p.guardian { 1 } else { 0 };
+				compute += if p.compute { 1 } else { 0 };
+				verifier += if p.verifier { 1 } else { 0 };
+				g
+			})
+			.collect();
+
+		if std_guardians < Self::minimum_guardian_count().max(1) {
+			// Guardian "election" failed
+			return None;
 		}
+
+		// ***IMP***: era increment/init managed by pallet-session
+		let current_era = if is_genesis { current_era } else { current_era.saturating_add(1) };
+		// clear historical era info
+		if let Some(old_era) = current_era.checked_sub(T::HistoryDepth::get() + 1) {
+			Self::clear_guard_era_information(old_era);
+		}
+
+		// store stake info
+		let mut total_stake: BalanceOf<T> = Zero::zero();
+		Guardians::<T>::iter().for_each(|(g, p)| {
+			let stake = Self::stake(&g).unwrap_or_default();
+			total_stake = total_stake.saturating_add(stake.active);
+			<ErasGuardianPrefs<T>>::insert(&current_era, g, p);
+		});
+
+		let mut guardians_points = Vec::new();
+		Guardians::<T>::iter().for_each(|(g, p)| {
+			let stake = Self::stake(&g).unwrap_or_default();
+			let ratio = Perbill::from_rational(stake.active, total_stake);
+			guardians_points.push((g.clone(), ratio.deconstruct()));
+		});
+		Self::reward_guardian_by_ids(guardians_points, current_era);
+
+		EraInfo::<T>::set_guardians_stake(current_era, total_stake);
+
+		// guardian exposures -> to be filtered from
+		Some(guardians)
+	}
+
+	pub fn reward_guardian_by_ids(guardians_points: impl IntoIterator<Item = (T::AccountId, u32)>, era: EraIndex) {
+		<ErasGuardianPoints<T>>::mutate(era, |era_rewards| {
+			for (guardian, points) in guardians_points.into_iter() {
+				*era_rewards.individual.entry(guardian).or_default() += points;
+				era_rewards.total += points;
+			}
+		});
 	}
 
 	/// Helper to set a new `ForceEra` mode.
@@ -1488,21 +1456,17 @@ impl<T: Config> ElectionDataProvider for Pallet<T> {
 /// some session can lag in between the newest session planned and the latest session started.
 impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		log!(warn, "planning new session {} from {}:{}", new_index, file!(), line!());
 		CurrentPlannedSession::<T>::put(new_index);
 		Self::new_session(new_index, false).map(|v| v.into_inner())
 	}
 	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		log!(warn, "planning new session {} at genesis from {}:{}", new_index, file!(), line!());
 		CurrentPlannedSession::<T>::put(new_index);
 		Self::new_session(new_index, true).map(|v| v.into_inner())
 	}
 	fn start_session(start_index: SessionIndex) {
-		log!(warn, "starting session {} from {}:{}", start_index, file!(), line!());
 		Self::start_session(start_index)
 	}
 	fn end_session(end_index: SessionIndex) {
-		log!(warn, "ending session {} from {}:{}", end_index, file!(), line!());
 		Self::end_session(end_index)
 	}
 }
@@ -1525,64 +1489,26 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 		log::warn!("reward points {points:?}");
 	}
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} from {}:{}", new_index, file!(), line!());
-		// CurrentPlannedSession::<T>::put(new_index);
-		// initialize planning of new session; update intent of existing guardians to guard
-		// Self::new_session(new_index, false).map(|v| v.into_inner())
-		if let Some(old_era) = CurrentEra::<T>::get().unwrap_or(0).checked_sub(T::HistoryDepth::get() + 1) {
-			Self::clear_guard_era_information(old_era);
-		}
-		let mut guardians_to_pay = Vec::new();
-		let mut total_guardian_stake: BalanceOf<T> = Zero::zero();
-		for (g, prefs) in Guardians::<T>::iter() {
-			ErasGuardianPrefs::<T>::insert(new_index, &g, &prefs);
-			let stake = Self::stake(&g).unwrap_or_default();
-			total_guardian_stake = total_guardian_stake.saturating_add(stake.active);
-			guardians_to_pay.push((g.clone(), 10u32)); // give each guardian 10 points for now
-			log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} guardian {:?} stake {:?}, active {:?}, pref {:?}", new_index, g, stake, stake.active, prefs);
-		}
-		Self::reward_guardian_by_ids(guardians_to_pay);
-		EraInfo::<T>::set_guardians_stake(new_index, total_guardian_stake);
-		log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} total_guardian_stake {:?}", new_index, total_guardian_stake);
-		Some(
-			Guardians::<T>::iter()
-				.map(|(g, _)| g)
-				.collect()
-		)
+		Self::new_guard_session(new_index, false)
 	}
 	fn new_session_genesis(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-		log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} at genesis from {}:{}", new_index, file!(), line!());
-		// CurrentPlannedSession::<T>::put(new_index);
-		// Self::new_session(new_index, true).map(|v| v.into_inner())
-		None
+		Self::new_guard_session(new_index, true)
 	}
 	fn start_session(start_index: SessionIndex) {
-		log::warn!(target: SEC_LOG_TARGET, "starting guard-session {} from {}:{}", start_index, file!(), line!());
-		// finalize the new list of guardians
-		// update storage of the started session
-		// perform any setup required for the new session
-		let mut guardians_to_pay = Vec::new();
-		let mut total_guardian_stake: BalanceOf<T> = Zero::zero();
-		for (g, prefs) in Guardians::<T>::iter() {
-			ErasGuardianPrefs::<T>::insert(start_index, &g, &prefs);
-			let stake = Self::stake(&g).unwrap_or_default();
-			total_guardian_stake = total_guardian_stake.saturating_add(stake.active);
-			guardians_to_pay.push((g.clone(), 10u32)); // give each guardian 10 points for now
-			log::warn!(target: SEC_LOG_TARGET, "starting new guard-session {} guardian {:?} stake {:?}, active {:?}, pref {:?}", start_index, g, stake, stake.active, prefs);
-		}
-		Self::reward_guardian_by_ids(guardians_to_pay);
-		EraInfo::<T>::set_guardians_stake(start_index, total_guardian_stake);
-		log::warn!(target: SEC_LOG_TARGET, "starting new guard-session {} total_guardian_stake {:?}", start_index, total_guardian_stake);
+		// Nothing to do. pallet-session handles the following -
+		// (0) Session Overlap check (1) active era init (2) Bonded eras (3) Apply slashes (4) Disable offenders
 	}
 	fn end_session(end_index: SessionIndex) {
-		log::warn!(target: SEC_LOG_TARGET, "ending guard-session {} from {}:{}", end_index, file!(), line!());
-		// clear storage of the ended session
-		// Self::end_session(end_index)
+		// Nothing to do. pallet-session handles the following -
+		// (0) Session Overlap check (1) payout (2) Resetting offenders
 	}
 }
 
-impl<T: Config> pallet_guard_session::historical::SessionManager<T::AccountId, Exposure<T::AccountId, BalanceOf<T>>>
-	for Pallet<T>
+impl<T: Config>
+	pallet_guard_session::historical::SessionManager<
+		T::AccountId,
+		Exposure<T::AccountId, BalanceOf<T>>,
+	> for Pallet<T>
 {
 	fn new_session(
 		new_index: SessionIndex,
@@ -2214,8 +2140,8 @@ impl<T: Config> Pallet<T> {
 
 	fn check_count() -> Result<(), TryRuntimeError> {
 		ensure!(
-			<T as Config>::VoterList::count() ==
-				Nominators::<T>::count() + Validators::<T>::count() + Guardians::<T>::count(),
+			<T as Config>::VoterList::count()
+				== Nominators::<T>::count() + Validators::<T>::count() + Guardians::<T>::count(),
 			"wrong external count"
 		);
 		ensure!(
