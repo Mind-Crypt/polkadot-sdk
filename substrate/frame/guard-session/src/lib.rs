@@ -77,6 +77,7 @@ impl<
 
 /// A trait for managing creation of new guardian set.
 pub trait SessionManager<GuardianId> {
+	fn test(_: SessionIndex) {}
 	/// Plan a new session, and optionally provide the new guardian set.
 	///
 	/// Even if the guardian-set is the same as before, if any underlying economic conditions have
@@ -110,6 +111,7 @@ pub trait SessionManager<GuardianId> {
 }
 
 impl<A> SessionManager<A> for () {
+	fn test(_: SessionIndex) {}
 	fn new_session(_: SessionIndex) -> Option<Vec<A>> {
 		None
 	}
@@ -421,6 +423,7 @@ impl<T: Config> Pallet<T> {
 		let changed = QueuedChanged::<T>::get();
 		let session_index = <CurrentIndex<T>>::get();
 		log::info!(target: LOG_TARGET, "rotating guard session {:?}", session_index);
+		T::SessionManager::test(session_index);
 
 		// Inform the session handlers that a session is going to end.
 		// T::SessionHandler::on_before_session_ending();
@@ -438,11 +441,14 @@ impl<T: Config> Pallet<T> {
 		// Increment session index.
 		let session_index = session_index + 1;
 		<CurrentIndex<T>>::put(session_index);
+		T::SessionManager::test(session_index);
 
 		T::SessionManager::start_session(session_index);
+		T::SessionManager::test(session_index);
 
 		// Get next guardian set.
 		let maybe_next_guardians = T::SessionManager::new_session(session_index + 1);
+		T::SessionManager::test(session_index + 1);
 		log::info!(
 			target: LOG_TARGET,
 			"Next guardian list for session {}: {:?}",

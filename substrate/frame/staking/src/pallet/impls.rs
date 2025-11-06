@@ -33,6 +33,7 @@ use frame_support::{
 	weights::Weight,
 };
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use log::warn;
 use pallet_session::historical;
 use sp_runtime::{
 	traits::{Bounded, Convert, One, SaturatedConversion, Saturating, StaticLookup, Zero},
@@ -1512,6 +1513,17 @@ impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 /// Once the first new_session is planned, all session must start and then end in order, though
 /// some session can lag in between the newest session planned and the latest session started.
 impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T> {
+	fn test(index: SessionIndex) {
+		log::warn!("Testing as index {index:?}");
+		for (g, prefs) in Guardians::<T>::iter() {
+			let pref = ErasGuardianPrefs::<T>::get(index, &g);
+			log::warn!("prefs {prefs:?}, pref {pref:?}");
+		}
+		let total_stake = ErasGuardianStake::<T>::get(index);
+		log::warn!("total_stak {total_stake:?}");
+		let points = ErasGuardianPoints::<T>::get(index);
+		log::warn!("reward points {points:?}");
+	}
 	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
 		log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} from {}:{}", new_index, file!(), line!());
 		// CurrentPlannedSession::<T>::put(new_index);
