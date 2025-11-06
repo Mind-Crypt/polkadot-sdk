@@ -1527,7 +1527,7 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 			let stake = Self::stake(&g).unwrap_or_default();
 			total_guardian_stake = total_guardian_stake.saturating_add(stake.active);
 			guardians_to_pay.push((g.clone(), 10u32)); // give each guardian 10 points for now
-			log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} guardian {:?} stake {:?}, active {:?}", new_index, g, stake, stake.active);
+			log::warn!(target: SEC_LOG_TARGET, "planning new guard-session {} guardian {:?} stake {:?}, active {:?}, pref {:?}", new_index, g, stake, stake.active, prefs);
 		}
 		Self::reward_guardian_by_ids(guardians_to_pay);
 		EraInfo::<T>::set_guardians_stake(new_index, total_guardian_stake);
@@ -1549,7 +1549,18 @@ impl<T: Config> pallet_guard_session::SessionManager<T::AccountId> for Pallet<T>
 		// finalize the new list of guardians
 		// update storage of the started session
 		// perform any setup required for the new session
-		// Self::start_session(start_index)
+		let mut guardians_to_pay = Vec::new();
+		let mut total_guardian_stake: BalanceOf<T> = Zero::zero();
+		for (g, prefs) in Guardians::<T>::iter() {
+			ErasGuardianPrefs::<T>::insert(start_index, &g, &prefs);
+			let stake = Self::stake(&g).unwrap_or_default();
+			total_guardian_stake = total_guardian_stake.saturating_add(stake.active);
+			guardians_to_pay.push((g.clone(), 10u32)); // give each guardian 10 points for now
+			log::warn!(target: SEC_LOG_TARGET, "starting new guard-session {} guardian {:?} stake {:?}, active {:?}, pref {:?}", start_index, g, stake, stake.active, prefs);
+		}
+		Self::reward_guardian_by_ids(guardians_to_pay);
+		EraInfo::<T>::set_guardians_stake(start_index, total_guardian_stake);
+		log::warn!(target: SEC_LOG_TARGET, "starting new guard-session {} total_guardian_stake {:?}", start_index, total_guardian_stake);
 	}
 	fn end_session(end_index: SessionIndex) {
 		log::warn!(target: SEC_LOG_TARGET, "ending guard-session {} from {}:{}", end_index, file!(), line!());

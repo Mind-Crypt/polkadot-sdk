@@ -7,8 +7,7 @@ use serde::{Deserialize, Serialize};
 use codec::{Encode, Decode, MaxEncodedLen};
 
 use sp_runtime::{
-	traits::{Convert, Member, OpaqueKeys, Zero},
-	DispatchError, KeyTypeId, RuntimeAppPublic,
+	AccountId32, DispatchError, KeyTypeId, RuntimeAppPublic, traits::{Convert, Member, OpaqueKeys, Zero}
 };
 use sp_staking::SessionIndex;
 use sp_std::{
