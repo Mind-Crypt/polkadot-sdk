@@ -347,6 +347,10 @@ pub mod pallet {
 	#[pallet::getter(fn disabled_guardians)]
 	pub type DisabledGuardians<T> = StorageValue<_, Vec<u32>, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn default_groups_marker)]
+	pub type DefafaultGroupsMarker<T> = StorageValue<_, bool, ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event {
@@ -456,7 +460,7 @@ impl<T: Config> Pallet<T> {
 			maybe_next_guardians
 		);
 		let (next_guardians, next_identities_changed) =
-			if let Some(guardians) = maybe_next_guardians {
+			if let Some(guardians) = maybe_next_guardians.clone() {
 				// NOTE: as per the documentation on `OnSessionEnding`, we consider
 				// the guardian set as having changed even if the guardians are the
 				// same as before, as underlying economic conditions may have changed.
@@ -485,6 +489,23 @@ impl<T: Config> Pallet<T> {
 			next_guardians
 		);
 
+		let prev_queued = NextGuardians::<T>::get();
+		let mut queued_changed_flag = false;
+
+		// If lengths differ it's a change; otherwise check for any element differences.
+		if prev_queued.len() != next_guardians.len() {
+			queued_changed_flag = true;
+		} else {
+			for g in &next_guardians {
+				if !prev_queued.iter().any(|p| p == g) {
+					queued_changed_flag = true;
+					break;
+				}
+			}
+		}
+
+		DefafaultGroupsMarker::<T>::put(maybe_next_guardians.is_some() && !queued_changed_flag);
+		QueuedChanged::<T>::put(maybe_next_guardians.is_some() && queued_changed_flag);
 		NextGuardians::<T>::put(&next_guardians);
 
 		// Record that this happened.
@@ -492,6 +513,10 @@ impl<T: Config> Pallet<T> {
 
 		// Tell everyone about the new session keys.
 		// T::SessionHandler::on_new_session::<T::Keys>(changed, &session_keys, &queued_amalgamated);
+	}
+
+	pub fn set_groups_marker(value: bool) {
+		DefafaultGroupsMarker::<T>::put(value);
 	}
 }
 
