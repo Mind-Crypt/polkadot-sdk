@@ -735,6 +735,9 @@ pub trait TransactionPool {
 	///
 	/// The transaction will end up in the pool and be propagated to others.
 	fn submit_transaction(&mut self, extrinsic: Vec<u8>) -> Result<(), ()>;
+
+	/// Fetch future transactions present in the mempool
+	fn future_transactions(&mut self) -> Result<Vec<Vec<u8>>, ()>;
 }
 
 #[cfg(feature = "std")]

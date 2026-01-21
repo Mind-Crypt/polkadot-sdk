@@ -33,6 +33,7 @@ mod tests;
 
 pub use crate::api::FullChainApi;
 use async_trait::async_trait;
+use codec::Encode;
 use enactment_state::{EnactmentAction, EnactmentState};
 use futures::{
 	channel::oneshot,
@@ -460,6 +461,12 @@ where
 		);
 
 		self.pool.validated_pool().submit(vec![validated]).remove(0)
+	}
+
+	fn get_futures(&self) -> Result<Vec<Vec<u8>>, ()> {
+		Ok(self.pool.validated_pool().futures().iter().map(|(h, ext)| {
+			ext.encode()
+		}).collect())
 	}
 }
 

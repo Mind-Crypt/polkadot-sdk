@@ -1353,6 +1353,16 @@ pub trait Offchain {
 			.submit_transaction(data)
 	}
 
+	/// Fetch future transactions from the pool.
+	fn future_transactions(&mut self) -> Result<Vec<Vec<u8>>, ()> {
+		self.extension::<TransactionPoolExt>()
+			.expect(
+				"future_transactions can be called only in the offchain call context with
+				TransactionPool capabilities enabled",
+			)
+			.future_transactions()
+	}
+
 	/// Returns information about the local node's network state.
 	fn network_state(&mut self) -> Result<OpaqueNetworkState, ()> {
 		self.extension::<OffchainWorkerExt>()

@@ -430,4 +430,8 @@ impl TransactionPool for TestTransactionPoolExt {
 		self.0.write().transactions.push(extrinsic);
 		Ok(())
 	}
+
+	fn future_transactions(&mut self) -> Result<Vec<Vec<u8>>, ()> {
+		Ok(self.0.read().transactions.clone())
+	}
 }

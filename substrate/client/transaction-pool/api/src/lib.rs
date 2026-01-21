@@ -348,6 +348,9 @@ pub trait LocalTransactionPool: Send + Sync {
 		at: <Self::Block as BlockT>::Hash,
 		xt: LocalTransactionFor<Self>,
 	) -> Result<Self::Hash, Self::Error>;
+
+	/// Provides the future transactions present in the pool
+	fn get_futures(&self) -> Result<Vec<Vec<u8>>, ()>;
 }
 
 impl<T: LocalTransactionPool> LocalTransactionPool for Arc<T> {
@@ -364,6 +367,10 @@ impl<T: LocalTransactionPool> LocalTransactionPool for Arc<T> {
 	) -> Result<Self::Hash, Self::Error> {
 		(**self).submit_local(at, xt)
 	}
+
+	fn get_futures(&self) -> Result<Vec<Vec<u8>>, ()> {
+		(**self).get_futures()
+	}
 }
 
 /// An abstraction for [`LocalTransactionPool`]
@@ -376,6 +383,9 @@ trait OffchainSubmitTransaction<Block: BlockT>: Send + Sync {
 	///
 	/// The transaction will end up in the pool and be propagated to others.
 	fn submit_at(&self, at: Block::Hash, extrinsic: Block::Extrinsic) -> Result<(), ()>;
+
+	/// Get future transactions
+	fn get_futures(&self) -> Result<Vec<Vec<u8>>, ()>;
 }
 
 impl<TPool: LocalTransactionPool> OffchainSubmitTransaction<TPool::Block> for TPool {
@@ -399,6 +409,10 @@ impl<TPool: LocalTransactionPool> OffchainSubmitTransaction<TPool::Block> for TP
 				e
 			)
 		})
+	}
+
+	fn get_futures(&self) -> Result<Vec<Vec<u8>>, ()> {
+		self.get_futures()
 	}
 }
 
@@ -448,6 +462,10 @@ impl<Block: BlockT> sp_core::offchain::TransactionPool for OffchainTransactionPo
 
 		self.pool.submit_at(self.block_hash, extrinsic)
 	}
+
+	fn future_transactions(&mut self) -> Result<Vec<Vec<u8>>, ()> {
+		self.pool.get_futures()
+	}
 }
 
 /// Wrapper functions to keep the API backwards compatible over the wire for the old RPC spec.
@@ -493,6 +511,10 @@ impl<Block: BlockT> LocalTransactionPool for RejectAllTxPool<Block> {
 
 	fn submit_local(&self, _: Block::Hash, _: Block::Extrinsic) -> Result<Self::Hash, Self::Error> {
 		Err(error::Error::ImmediatelyDropped)
+	}
+
+	fn get_futures(&self) -> Result<Vec<Vec<u8>>, ()> {
+		Ok(Vec::new())
 	}
 }
 
