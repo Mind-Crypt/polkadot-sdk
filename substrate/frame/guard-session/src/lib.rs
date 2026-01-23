@@ -1,13 +1,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 use frame_support::pallet_prelude::*;
 use frame_support::traits::OneSessionHandler;
+use frame_system::offchain::SubmitTransaction;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use codec::{Encode, Decode, MaxEncodedLen};
 
+use sp_core::offchain::StorageKind;
+use sp_io::hashing::blake2_256;
 use sp_runtime::{
-	AccountId32, DispatchError, KeyTypeId, RuntimeAppPublic, traits::{Convert, Member, OpaqueKeys, Zero}
+	AccountId32, BoundedSlice, DispatchError, KeyTypeId, RuntimeAppPublic, traits::{Convert, Extrinsic, Member, OpaqueKeys, Zero}
 };
 use sp_staking::SessionIndex;
 use sp_std::{
@@ -74,6 +77,37 @@ impl<
 		now >= offset && ((now - offset) % Period::get()).is_zero()
 	}
 }
+
+/// Error which may occur while executing the off-chain code.
+#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug)]
+enum OffchainErr {
+	TooEarly,
+	AlreadyOnline(u32),
+	FailedSigning,
+	FailedToAcquireLock,
+	SubmitTransaction,
+}
+
+type OffchainResult<A> = Result<A, OffchainErr>;
+
+#[derive(Default, Decode, Encode, PartialEq)]
+pub enum AgreementAction {
+	#[default]
+	Ignore,
+	Accept,
+	Reject,
+}
+
+#[derive(Default, Decode, Encode, PartialEq)]
+pub enum AgreementState {
+	#[default]
+	Pending,
+	Processed,
+}
+
+#[derive(Default, Decode, Encode)]
+pub struct AgreementEntry(AgreementAction, AgreementState, [u8; 32]);
 
 /// A trait for managing creation of new guardian set.
 pub trait SessionManager<GuardianId> {
@@ -233,7 +267,7 @@ impl<AId> SessionHandler<AId> for TestSessionHandler {
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
+	use frame_system::{offchain::SendTransactionTypes, pallet_prelude::*};
 
 	use super::*;
 
@@ -246,7 +280,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: SendTransactionTypes<Call<Self>> + frame_system::Config {
 		/// The overarching event type.
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -270,6 +304,9 @@ pub mod pallet {
 
 		/// Validate a guardian's registration status.
 		type GuardianRegistration: GuardianRegistration<Self::GuardianId>;
+
+		/// The maximum number of keys that can be added.
+		type MaxKeys: Get<u32>;
 	}
 
 	#[pallet::genesis_config]
@@ -351,6 +388,12 @@ pub mod pallet {
 	#[pallet::getter(fn default_groups_marker)]
 	pub type DefafaultGroupsMarker<T> = StorageValue<_, bool, ValueQuery>;
 
+	/// The current set of keys that may issue a heartbeat.
+	#[pallet::storage]
+	#[pallet::getter(fn keys)]
+	pub(super) type Keys<T: Config> =
+		StorageValue<_, WeakBoundedVec<GuardianId, T::MaxKeys>, ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event {
@@ -386,6 +429,19 @@ pub mod pallet {
 				Weight::zero()
 			}
 		}
+
+		fn offchain_worker(now: BlockNumberFor<T>) {
+			// Only send messages if we are a potential validator.
+			if sp_io::offchain::is_validator() {
+				Self::accept_agreements();
+			} else {
+				log::trace!(
+					target: LOG_TARGET,
+					"Accepting agreements at {:?}. Not a validator.",
+					now,
+				)
+			}
+		}
 	}
 
 	#[pallet::call]
@@ -415,6 +471,57 @@ pub mod pallet {
 			<Worker<T>>::insert(nodeid, controller);
 
 			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight(Weight::from_parts(16_980_000, 4556))]
+		pub fn agreement(
+			origin: OriginFor<T>,
+			_agreementid: [u8; 32],
+			// since signature verification is done in `validate_unsigned`
+			// we can skip doing it here again.
+			_signature: <GuardianId as RuntimeAppPublic>::Signature,
+		) -> DispatchResultWithPostInfo {
+			ensure_none(origin)?;
+
+			Ok(().into())
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight(Weight::from_parts(16_980_000, 4556))]
+		pub fn agreement_response(
+			origin: OriginFor<T>,
+			_agreementid: [u8; 32],
+			// since signature verification is done in `validate_unsigned`
+			// we can skip doing it here again.
+			_signature: <GuardianId as RuntimeAppPublic>::Signature,
+			_acceptance: bool,
+		) -> DispatchResultWithPostInfo {
+			ensure_none(origin)?;
+
+			Ok(().into())
+		}
+	}
+
+	/// Invalid transaction custom error. Returned when validators_len field in heartbeat is
+	/// incorrect.
+	pub(crate) const INVALID_VALIDATORS_LEN: u8 = 10;
+
+	#[pallet::validate_unsigned]
+	impl<T: Config> ValidateUnsigned for Pallet<T> {
+		type Call = Call<T>;
+
+		fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+			if let Call::agreement_response { agreementid, signature, .. } = call {
+				ValidTransaction::with_tag_prefix("GuardAgreement")
+					.priority(TransactionPriority::MAX)
+					.and_provides(agreementid)
+					.longevity(64_u64)
+					.propagate(true)
+					.build()
+			} else {
+				InvalidTransaction::Call.into()
+			}
 		}
 	}
 }
@@ -518,40 +625,155 @@ impl<T: Config> Pallet<T> {
 	pub fn set_groups_marker(value: bool) {
 		DefafaultGroupsMarker::<T>::put(value);
 	}
+
+	fn sign_and_send(agreements: Vec<([u8; 32], bool)>) -> OffchainResult<()> {
+		// local keystore
+		//
+		// All `GuardianId` public (+private) keys currently in the local keystore.
+		let mut local_keys = GuardianId::all();
+		local_keys.sort();
+
+		// on-chain storage
+		//
+		// At index `idx`:
+		// 1. A (GuardianId) public key to be used by a validator at index `idx` to send im-online
+		//    heartbeats.
+		let guardians = Keys::<T>::get();
+		log::info!(target: LOG_TARGET, "Keys in session = {guardians:?}");
+
+		// TODO: remove signing using local_keys
+		local_keys.iter().for_each(|key| {
+			log::trace!(target: LOG_TARGET, "Signing agreement unconditionally");
+			for (agreementid, acceptance) in agreements.clone() {
+				let signature = key.sign(&agreementid.encode()).ok_or(OffchainErr::FailedSigning);
+				let signature = signature.unwrap();
+	
+				let call = Call::agreement_response { agreementid, signature, acceptance };
+	
+				SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).unwrap_or_else(|e| {
+						log::error!(target: LOG_TARGET, "Failed to submit agreement transaction. Error = {e:?}");
+					});
+			}
+		});
+
+		guardians.into_iter().enumerate().filter_map(move |(index, guardian)| {
+			log::info!(target: LOG_TARGET, "guardian id = {guardian:?}");
+			local_keys
+				.binary_search(&guardian)
+				.ok()
+				.map(|location| (index as u32, local_keys[location].clone()))
+		}).map(move |(_, key)| {
+			log::trace!(target: LOG_TARGET, "Signing agreement with as guardian");
+			for (agreementid, acceptance) in agreements.clone() {
+				let signature = key.sign(&agreementid.encode()).ok_or(OffchainErr::FailedSigning);
+				let signature = signature.unwrap();
+	
+				let call = Call::agreement_response { agreementid, signature, acceptance };
+	
+				SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).unwrap_or_else(|e| {
+						log::error!(target: LOG_TARGET, "Failed to submit agreement transaction. Error = {e:?}");
+					});
+			}
+		});
+
+		Ok(())
+	}
+
+	pub fn accept_agreements() -> OffchainResult<()> {
+		let mut lst = sp_io::offchain::future_transactions().unwrap_or_default();
+		let mut agreements = Vec::<([u8; 32], bool)>::new();
+
+		for item in lst.into_iter() {
+			let mut slice: &[u8] = &item;
+			let item_hash = blake2_256(&item);
+			let store = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, item_hash.as_ref());
+
+			if store.is_none() {
+				log::trace!(target: LOG_TARGET, "Skipping filtered agreement");
+				continue;
+			}
+
+			let mut store = store.unwrap();
+			let et = AgreementEntry::decode(&mut store.as_slice()).unwrap_or(AgreementEntry::default());
+
+			if AgreementAction::Ignore == et.0 || AgreementState::Processed == et.1 {
+				log::trace!(target: LOG_TARGET, "Skipping processed agreement");
+				continue;
+			}
+
+			log::trace!(target: LOG_TARGET, "Accepting agreement {:?}", et.2);
+			agreements.push((et.2, AgreementAction::Accept == et.0));
+
+			sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, item_hash.as_ref(), Encode::encode(&(et.0, AgreementState::Processed, et.2)).as_slice());
+		}
+
+		log::info!(target: LOG_TARGET, "agreements = {agreements:?}");
+		Self::sign_and_send(agreements);
+		Ok(())
+	}
+
+	fn initialize_keys(keys: &[GuardianId]) {
+		if !keys.is_empty() {
+			assert!(Keys::<T>::get().is_empty(), "Keys are already initialized!");
+			let bounded_keys = <BoundedSlice<'_, _, T::MaxKeys>>::try_from(keys)
+				.expect("More than the maximum number of keys provided");
+			Keys::<T>::put(bounded_keys);
+		}
+	}
+
+	#[cfg(test)]
+	fn set_keys(keys: Vec<T::GuardianId>) {
+		let bounded_keys = WeakBoundedVec::<_, T::MaxKeys>::try_from(keys)
+			.expect("More than the maximum number of keys provided");
+		Keys::<T>::put(bounded_keys);
+	}
 }
 
 impl<T: Config> OneSessionHandler<T::GuardianId> for Pallet<T> {
-       type Key = GuardianId;
+	type Key = GuardianId;
 
-       fn on_before_session_ending() {
-               
-       }
+	fn on_before_session_ending() {
+		let keys = Keys::<T>::get();
 
-       fn on_disabled(_validator_index: u32) {
-               
-       }
+		log::warn!(
+			target: LOG_TARGET,
+			"Session ended. Validators: {:?}",
+			keys,
+		);
+	}
 
-       fn on_genesis_session<'a, I: 'a>(validators: I)
-               where I: Iterator<Item = (&'a T::GuardianId, Self::Key)>,
-                       T::GuardianId: 'a {
-               log::warn!(target: LOG_TARGET, "on_genesis_session");
-               log::info!(
-                       target: LOG_TARGET,
-                       "on_genesis_session called with validators: {:?}",
-                       validators.collect::<Vec<_>>()
-               );
-       }
+	fn on_disabled(_validator_index: u32) {
+		// ignore
+	}
 
-       fn on_new_session<'a, I: 'a>(changed: bool, validators: I, queued_validators: I)
-               where I: Iterator<Item = (&'a T::GuardianId, Self::Key)>,
-                       T::GuardianId: 'a {
-               log::warn!(target: LOG_TARGET, "on_new_session");
-               log::info!(
-                       target: LOG_TARGET,
-                       "on_new_session called with changed: {}, validators: {:?}, queued_validators: {:?}",
-                       changed,
-                       validators.collect::<Vec<_>>(),
-                       queued_validators.collect::<Vec<_>>()
-               );
-       }
+	fn on_genesis_session<'a, I: 'a>(validators: I)
+	where
+		I: Iterator<Item = (&'a T::GuardianId, Self::Key)>,
+		T::GuardianId: 'a 
+	{
+		let keys = validators.map(|x| x.1).collect::<Vec<_>>();
+		Self::initialize_keys(&keys);
+		log::warn!(target: LOG_TARGET, "on_genesis_session");
+	}
+
+	fn on_new_session<'a, I: 'a>(changed: bool, validators: I, queued_validators: I)
+	where
+		I: Iterator<Item = (&'a T::GuardianId, Self::Key)>,
+		T::GuardianId: 'a
+	{
+		// Remember who the authorities are for the new session.
+		let keys = validators.map(|x| {
+			log::info!(target: LOG_TARGET, "validators of the session = {x:?}");
+			x.1
+		}).collect::<Vec<_>>();
+		let bounded_keys = WeakBoundedVec::<_, T::MaxKeys>::force_from(
+			keys,
+			Some(
+				"Warning: The session has more keys than expected. \
+				A runtime configuration adjustment may be needed.",
+			),
+		);
+		Keys::<T>::put(bounded_keys);
+		log::warn!(target: LOG_TARGET, "on_new_session");
+	}
 }
