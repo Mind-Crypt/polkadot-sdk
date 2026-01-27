@@ -400,6 +400,7 @@ pub mod pallet {
 		/// New session has happened. Note that the argument is the session index, not the
 		/// block number as the type might suggest.
 		NewSession { session_index: SessionIndex },
+		NewAgreement { agrement: [u8; 32], signer: [u8; 32], acceptance: bool },
 	}
 
 	#[pallet::error]
@@ -491,14 +492,15 @@ pub mod pallet {
 		#[pallet::weight(Weight::from_parts(16_980_000, 4556))]
 		pub fn agreement_response(
 			origin: OriginFor<T>,
-			_agreementid: [u8; 32],
-			_peer_id: [u8; 32],
+			agreementid: [u8; 32],
+			peer_id: [u8; 32],
 			// since signature verification is done in `validate_unsigned`
 			// we can skip doing it here again.
 			_signature: <GuardianId as RuntimeAppPublic>::Signature,
-			_acceptance: bool,
+			acceptance: bool,
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
+			Self::deposit_event(Event::NewAgreement { agrement: agreementid, signer: peer_id, acceptance});
 
 			Ok(().into())
 		}
