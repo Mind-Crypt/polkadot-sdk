@@ -492,6 +492,7 @@ pub mod pallet {
 		pub fn agreement_response(
 			origin: OriginFor<T>,
 			_agreementid: [u8; 32],
+			_peer_id: [u8; 32],
 			// since signature verification is done in `validate_unsigned`
 			// we can skip doing it here again.
 			_signature: <GuardianId as RuntimeAppPublic>::Signature,
@@ -512,10 +513,11 @@ pub mod pallet {
 		type Call = Call<T>;
 
 		fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-			if let Call::agreement_response { agreementid, signature, .. } = call {
+			if let Call::agreement_response { agreementid, peer_id, signature, .. } = call {
+
 				ValidTransaction::with_tag_prefix("GuardAgreement")
 					.priority(TransactionPriority::MAX)
-					.and_provides(agreementid)
+					.and_provides((peer_id, agreementid))
 					.longevity(64_u64)
 					.propagate(true)
 					.build()
@@ -626,7 +628,7 @@ impl<T: Config> Pallet<T> {
 		DefafaultGroupsMarker::<T>::put(value);
 	}
 
-	fn sign_and_send(agreements: Vec<([u8; 32], bool)>) -> OffchainResult<()> {
+	fn sign_and_send(agreements: Vec<([u8; 32], &[u8; 32], bool)>) -> OffchainResult<()> {
 		// local keystore
 		//
 		// All `GuardianId` public (+private) keys currently in the local keystore.
@@ -644,11 +646,11 @@ impl<T: Config> Pallet<T> {
 		// TODO: remove signing using local_keys
 		local_keys.iter().for_each(|key| {
 			log::trace!(target: LOG_TARGET, "Signing agreement unconditionally");
-			for (agreementid, acceptance) in agreements.clone() {
+			for (agreementid, peer_id, acceptance) in agreements.clone() {
 				let signature = key.sign(&agreementid.encode()).ok_or(OffchainErr::FailedSigning);
 				let signature = signature.unwrap();
 	
-				let call = Call::agreement_response { agreementid, signature, acceptance };
+				let call = Call::agreement_response { agreementid, peer_id: *peer_id, signature, acceptance };
 	
 				SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).unwrap_or_else(|e| {
 						log::error!(target: LOG_TARGET, "Failed to submit agreement transaction. Error = {e:?}");
@@ -664,11 +666,11 @@ impl<T: Config> Pallet<T> {
 				.map(|location| (index as u32, local_keys[location].clone()))
 		}).map(move |(_, key)| {
 			log::trace!(target: LOG_TARGET, "Signing agreement with as guardian");
-			for (agreementid, acceptance) in agreements.clone() {
+			for (agreementid, peer_id, acceptance) in agreements.clone() {
 				let signature = key.sign(&agreementid.encode()).ok_or(OffchainErr::FailedSigning);
 				let signature = signature.unwrap();
 	
-				let call = Call::agreement_response { agreementid, signature, acceptance };
+				let call = Call::agreement_response { agreementid, peer_id: *peer_id, signature, acceptance };
 	
 				SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).unwrap_or_else(|e| {
 						log::error!(target: LOG_TARGET, "Failed to submit agreement transaction. Error = {e:?}");
@@ -681,7 +683,17 @@ impl<T: Config> Pallet<T> {
 
 	pub fn accept_agreements() -> OffchainResult<()> {
 		let mut lst = sp_io::offchain::future_transactions().unwrap_or_default();
-		let mut agreements = Vec::<([u8; 32], bool)>::new();
+		let mut agreements = Vec::new();
+		let peer_id = sp_io::offchain::network_state().unwrap_or_default();
+		let peer_id = {
+			let s = peer_id.peer_id.0.as_slice();;
+			let len = s.len();
+			let start = if len >= 32 { len - 32 } else { 0 };
+			let last = &s[start..];
+			let mut arr = [0u8; 32];
+			arr[(32 - last.len())..].copy_from_slice(last);
+			arr
+		};
 
 		for item in lst.into_iter() {
 			let mut slice: &[u8] = &item;
@@ -702,7 +714,7 @@ impl<T: Config> Pallet<T> {
 			}
 
 			log::trace!(target: LOG_TARGET, "Accepting agreement {:?}", et.2);
-			agreements.push((et.2, AgreementAction::Accept == et.0));
+			agreements.push((et.2, &peer_id, AgreementAction::Accept == et.0));
 
 			sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, item_hash.as_ref(), Encode::encode(&(et.0, AgreementState::Processed, et.2)).as_slice());
 		}
