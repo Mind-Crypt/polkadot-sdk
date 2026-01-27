@@ -443,14 +443,21 @@ where
 	H: std::hash::Hash + Eq + sp_runtime::traits::Member + sp_runtime::traits::MaybeSerialize,
 	E: IntoPoolError + From<sc_transaction_pool_api::error::Error>,
 {
-	pool.ready()
+	let futures: Vec<(H, <B as BlockT>::Extrinsic)> = pool.futures().iter()
+		.filter(|t| t.is_propagable()).map(|t| {
+			let hash = t.hash().clone();
+			let ex: B::Extrinsic = t.data().clone();
+			(hash, ex)
+		}).collect();
+	let ready = pool.ready()
 		.filter(|t| t.is_propagable())
 		.map(|t| {
 			let hash = t.hash().clone();
 			let ex: B::Extrinsic = t.data().clone();
 			(hash, ex)
 		})
-		.collect()
+		.collect();
+	[ futures, ready ].concat()
 }
 
 impl<B, H, C, Pool, E> sc_network_transactions::config::TransactionPool<H, B>
