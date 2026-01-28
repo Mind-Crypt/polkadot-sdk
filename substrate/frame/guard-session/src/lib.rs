@@ -519,14 +519,7 @@ use super::*;
 		#[pallet::weight(Weight::from_parts(16_980_000, 4556))]
 		pub fn agreement(
 			origin: OriginFor<T>,
-			_agreementid: [u8; 32],
-			// since signature verification is done in `validate_unsigned`
-			// we can skip doing it here again.
-			_signature: <GuardianId as RuntimeAppPublic>::Signature,
 		) -> DispatchResultWithPostInfo {
-			ensure_none(origin)?;
-			Agreements::<T>::insert(&_agreementid, AgreementStatus::Pending);
-
 			Ok(().into())
 		}
 
@@ -791,7 +784,7 @@ impl<T: Config> Pallet<T> {
 		Agreements::<T>::get(agreementid).unwrap_or(AgreementStatus::NotFound)
 	}
 
-	fn set_agreement_utilized(agreementid: &[u8; 32]) {
+	pub fn set_agreement_utilized(agreementid: &[u8; 32]) {
 		Agreements::<T>::insert(agreementid, AgreementStatus::Utilized);
 	}
 }
