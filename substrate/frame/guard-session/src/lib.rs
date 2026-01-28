@@ -786,6 +786,14 @@ impl<T: Config> Pallet<T> {
 			.expect("More than the maximum number of keys provided");
 		Keys::<T>::put(bounded_keys);
 	}
+
+	pub fn get_agreement_status(agreementid: &[u8; 32]) -> AgreementStatus {
+		Agreements::<T>::get(agreementid).unwrap_or(AgreementStatus::NotFound)
+	}
+
+	fn set_agreement_utilized(agreementid: &[u8; 32]) {
+		Agreements::<T>::insert(agreementid, AgreementStatus::Utilized);
+	}
 }
 
 impl<T: Config> OneSessionHandler<T::GuardianId> for Pallet<T> {
@@ -839,10 +847,10 @@ impl<T: Config> OneSessionHandler<T::GuardianId> for Pallet<T> {
 
 impl <T: Config> AgreementProvider for Pallet<T> {
 	fn get_agreement_status(agreementid: &[u8; 32]) -> AgreementStatus {
-		Agreements::<T>::get(agreementid).unwrap_or(AgreementStatus::NotFound)
+		Self::get_agreement_status(agreementid)
 	}
 
 	fn set_agreement_utilized(agreementid: &[u8; 32]) {
-		Agreements::<T>::insert(agreementid, AgreementStatus::Utilized);
+		Self::set_agreement_utilized(agreementid);
 	}
 }
