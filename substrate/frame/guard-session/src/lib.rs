@@ -2,15 +2,13 @@
 use frame_support::pallet_prelude::*;
 use frame_support::traits::OneSessionHandler;
 use frame_system::offchain::SubmitTransaction;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 use codec::{Encode, Decode, MaxEncodedLen};
 
 use sp_core::offchain::StorageKind;
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
-	AccountId32, BoundedSlice, DispatchError, KeyTypeId, RuntimeAppPublic, traits::{Convert, Extrinsic, Member, OpaqueKeys, Zero}
+	BoundedSlice, KeyTypeId, RuntimeAppPublic, traits::{Convert, Extrinsic, Member, OpaqueKeys, Zero}
 };
 use sp_staking::SessionIndex;
 use sp_std::{
@@ -24,13 +22,6 @@ pub mod historical;
 pub use pallet::*;
 
 pub const LOG_TARGET: &str = "runtime::guard-session";
-
-#[derive(Clone, Eq, PartialEq, Default, Debug, TypeInfo, Encode, Decode, MaxEncodedLen)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct RGuardianInfo {
-	pub active: u32,
-	pub maximum: u32,
-}
 
 mod app {
 	use scale_info::prelude::string::String;
@@ -153,11 +144,6 @@ impl<A> SessionManager<A> for () {
 	fn end_session(_: SessionIndex) {}
 }
 
-pub trait AgreementProvider {
-	fn get_agreement_status(agreementid: &[u8; 32]) -> AgreementStatus;
-	fn set_agreement_utilized(agreementid: &[u8; 32]);
-}
-
 /// Implementors of this trait provide information about whether or not some guardian has
 /// been registered with them. The [Session module](../../pallet_session/index.html) is an
 /// implementor.
@@ -270,13 +256,12 @@ impl<AId> SessionHandler<AId> for TestSessionHandler {
 
 #[frame_support::pallet]
 pub mod pallet {
-	use std::ops::Not;
 
 use super::*;
-	use frame_support::pallet_prelude::*;
+	
 	use frame_system::{offchain::SendTransactionTypes, pallet_prelude::*};
 
-	use super::*;
+	
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -285,16 +270,6 @@ use super::*;
 	#[pallet::storage_version(STORAGE_VERSION)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
-
-	#[derive(Decode, Encode, PartialEq, Default, TypeInfo)]
-	pub enum AgreementStatus {
-		#[default]
-		NotFound,
-		Pending,
-		Accepted,
-		Rejected,
-		Utilized,
-	}
 
 	#[pallet::config]
 	pub trait Config: SendTransactionTypes<Call<Self>> + frame_system::Config {
@@ -412,10 +387,6 @@ use super::*;
 		StorageValue<_, WeakBoundedVec<GuardianId, T::MaxKeys>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn agreements)]
-	pub type Agreements<T> = StorageMap<_, Twox64Concat, [u8; 32], AgreementStatus, OptionQuery>;
-
-	#[pallet::storage]
 	#[pallet::getter(fn agreement_responses)]
 	pub type AgreementsResponses<T> = StorageMap<_, Twox64Concat, [u8; 32], Vec<([u8; 32], bool)>, OptionQuery>;
 
@@ -458,7 +429,7 @@ use super::*;
 
 		fn offchain_worker(now: BlockNumberFor<T>) {
 			// Only send messages if we are a potential validator.
-			if sp_io::offchain::is_validator() {
+			if sp_io::offchain::is_guardian() {
 				Self::accept_agreements();
 			} else {
 				log::trace!(
@@ -500,14 +471,6 @@ use super::*;
 		}
 
 		#[pallet::call_index(1)]
-		#[pallet::weight(Weight::from_parts(16_980_000, 4556))]
-		pub fn agreement(
-			origin: OriginFor<T>,
-		) -> DispatchResultWithPostInfo {
-			Ok(().into())
-		}
-
-		#[pallet::call_index(2)]
 		#[pallet::weight(Weight::from_parts(16_980_000, 4556))]
 		pub fn agreement_response(
 			origin: OriginFor<T>,
@@ -706,7 +669,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn accept_agreements() -> OffchainResult<()> {
-		let mut lst = sp_io::offchain::future_transactions().unwrap_or_default();
+		let lst = sp_io::offchain::future_transactions().unwrap_or_default();
 		let mut agreements = Vec::new();
 		let peer_id = sp_io::offchain::network_state().unwrap_or_default();
 		let peer_id = {
@@ -720,7 +683,7 @@ impl<T: Config> Pallet<T> {
 		};
 
 		for item in lst.into_iter() {
-			let mut slice: &[u8] = &item;
+			let slice: &[u8] = &item;
 			let item_hash = blake2_256(&item);
 			let store = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, item_hash.as_ref());
 
@@ -729,7 +692,7 @@ impl<T: Config> Pallet<T> {
 				continue;
 			}
 
-			let mut store = store.unwrap();
+			let store = store.unwrap();
 			let et = AgreementEntry::decode(&mut store.as_slice()).unwrap_or(AgreementEntry::default());
 
 			if AgreementAction::Ignore == et.0 || AgreementState::Processed == et.1 {
@@ -762,14 +725,6 @@ impl<T: Config> Pallet<T> {
 		let bounded_keys = WeakBoundedVec::<_, T::MaxKeys>::try_from(keys)
 			.expect("More than the maximum number of keys provided");
 		Keys::<T>::put(bounded_keys);
-	}
-
-	pub fn get_agreement_status(agreementid: &[u8; 32]) -> AgreementStatus {
-		Agreements::<T>::get(agreementid).unwrap_or(AgreementStatus::NotFound)
-	}
-
-	pub fn set_agreement_utilized(agreementid: &[u8; 32]) {
-		Agreements::<T>::insert(agreementid, AgreementStatus::Utilized);
 	}
 }
 
@@ -819,15 +774,5 @@ impl<T: Config> OneSessionHandler<T::GuardianId> for Pallet<T> {
 		);
 		Keys::<T>::put(bounded_keys);
 		log::warn!(target: LOG_TARGET, "on_new_session");
-	}
-}
-
-impl <T: Config> AgreementProvider for Pallet<T> {
-	fn get_agreement_status(agreementid: &[u8; 32]) -> AgreementStatus {
-		Self::get_agreement_status(agreementid)
-	}
-
-	fn set_agreement_utilized(agreementid: &[u8; 32]) {
-		Self::set_agreement_utilized(agreementid);
 	}
 }

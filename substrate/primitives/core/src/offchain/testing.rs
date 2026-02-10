@@ -216,6 +216,10 @@ impl offchain::Externalities for TestOffchainExt {
 		true
 	}
 
+	fn is_guardian(&self) -> bool {
+		false
+	}
+
 	fn network_state(&self) -> Result<OpaqueNetworkState, ()> {
 		Ok(OpaqueNetworkState { peer_id: Default::default(), external_addresses: vec![] })
 	}

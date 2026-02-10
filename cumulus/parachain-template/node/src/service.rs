@@ -210,6 +210,7 @@ async fn start_node_impl(
 				)),
 				network_provider: network.clone(),
 				is_validator: parachain_config.role.is_authority(),
+				is_guardian: false,
 				enable_http_requests: false,
 				custom_extensions: move |_| vec![],
 			})

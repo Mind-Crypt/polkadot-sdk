@@ -37,7 +37,7 @@ sp-std = {path = "../../primitives/std", default-features = false}
 sp-trie = {path = "../../primitives/trie", default-features = false, optional = true}
 
 [features]
-default = ["historical", "std", "serde"]
+default = ["historical", "std"]
 historical = ["sp-trie"]
 runtime-benchmarks = [
   "frame-benchmarking",

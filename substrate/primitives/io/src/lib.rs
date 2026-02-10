@@ -1341,6 +1341,16 @@ pub trait Offchain {
 			.is_validator()
 	}
 
+	/// Returns if the local node is a potential guardian.
+	///
+	/// Even if this function returns `true`, it does not mean that any keys are configured
+	/// and that the guardian is registered in the chain.
+	fn is_guardian(&mut self) -> bool {
+		self.extension::<OffchainWorkerExt>()
+			.expect("is_guardian can be called only in the offchain worker context")
+			.is_guardian()
+	}
+
 	/// Submit an encoded transaction to the pool.
 	///
 	/// The transaction will end up in the pool.

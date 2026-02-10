@@ -287,6 +287,12 @@ pub trait Externalities: Send {
 	/// and that the validator is registered in the chain.
 	fn is_validator(&self) -> bool;
 
+	/// Returns if the local node is a potential guardian.
+	///
+	/// Even if this function returns `true`, it does not mean that any keys are configured
+	/// and that the guardian is registered in the chain.
+	fn is_guardian(&self) -> bool;
+
 	/// Returns information about the local node's network state.
 	fn network_state(&self) -> Result<OpaqueNetworkState, ()>;
 
@@ -427,6 +433,10 @@ impl<T: Externalities + ?Sized> Externalities for Box<T> {
 		(&**self).is_validator()
 	}
 
+	fn is_guardian(&self) -> bool {
+		(&**self).is_guardian()
+	}
+
 	fn network_state(&self) -> Result<OpaqueNetworkState, ()> {
 		(&**self).network_state()
 	}
@@ -522,6 +532,11 @@ impl<T: Externalities> Externalities for LimitedExternalities<T> {
 	fn is_validator(&self) -> bool {
 		self.check(Capabilities::KEYSTORE, "is_validator");
 		self.externalities.is_validator()
+	}
+
+	fn is_guardian(&self) -> bool {
+		self.check(Capabilities::KEYSTORE, "is_guardian");
+		self.externalities.is_guardian()
 	}
 
 	fn network_state(&self) -> Result<OpaqueNetworkState, ()> {

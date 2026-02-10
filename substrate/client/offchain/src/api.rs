@@ -44,6 +44,8 @@ pub(crate) struct Api {
 	network_provider: Arc<dyn NetworkProvider + Send + Sync>,
 	/// Is this node a potential validator?
 	is_validator: bool,
+	/// Is this node a potential guardian?
+	is_guardian: bool,
 	/// Everything HTTP-related is handled by a different struct.
 	http: http::HttpApi,
 }
@@ -51,6 +53,10 @@ pub(crate) struct Api {
 impl offchain::Externalities for Api {
 	fn is_validator(&self) -> bool {
 		self.is_validator
+	}
+
+	fn is_guardian(&self) -> bool {
+		self.is_guardian
 	}
 
 	fn network_state(&self) -> Result<OpaqueNetworkState, ()> {
@@ -199,11 +205,12 @@ impl AsyncApi {
 	pub fn new(
 		network_provider: Arc<dyn NetworkProvider + Send + Sync>,
 		is_validator: bool,
+		is_guardian: bool,
 		shared_http_client: SharedClient,
 	) -> (Api, Self) {
 		let (http_api, http_worker) = http::http(shared_http_client);
 
-		let api = Api { network_provider, is_validator, http: http_api };
+		let api = Api { network_provider, is_validator, is_guardian, http: http_api };
 
 		let async_api = Self { http: Some(http_worker) };
 
@@ -322,7 +329,7 @@ mod tests {
 		let mock = Arc::new(TestNetwork());
 		let shared_client = SharedClient::new();
 
-		AsyncApi::new(mock, false, shared_client)
+		AsyncApi::new(mock, false, false, shared_client)
 	}
 
 	fn offchain_db() -> OffchainDb<LocalStorage> {

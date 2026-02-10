@@ -106,6 +106,8 @@ pub struct OffchainWorkerOptions<RA, Block: traits::Block, Storage, CE> {
 	pub network_provider: Arc<dyn NetworkProvider + Send + Sync>,
 	/// Is the node running as validator?
 	pub is_validator: bool,
+	/// Is the node running as guardian?
+	pub is_guardian: bool,
 	/// Enable http requests from offchain workers?
 	///
 	/// If not enabled, any http request will panic.
@@ -137,6 +139,7 @@ pub struct OffchainWorkers<RA, Block: traits::Block, Storage> {
 	transaction_pool: Option<OffchainTransactionPoolFactory<Block>>,
 	network_provider: Arc<dyn NetworkProvider + Send + Sync>,
 	is_validator: bool,
+	is_guardian: bool,
 	custom_extensions: Box<dyn Fn(Block::Hash) -> Vec<Box<dyn Extension>> + Send>,
 }
 
@@ -150,6 +153,7 @@ impl<RA, Block: traits::Block, Storage> OffchainWorkers<RA, Block, Storage> {
 			transaction_pool,
 			network_provider,
 			is_validator,
+			is_guardian,
 			enable_http_requests,
 			custom_extensions,
 		}: OffchainWorkerOptions<RA, Block, Storage, CE>,
@@ -166,6 +170,7 @@ impl<RA, Block: traits::Block, Storage> OffchainWorkers<RA, Block, Storage> {
 			offchain_db: offchain_db.map(OffchainDb::new),
 			transaction_pool,
 			is_validator,
+			is_guardian,
 			network_provider,
 			custom_extensions: Box::new(custom_extensions),
 		}
@@ -246,6 +251,7 @@ where
 			let (api, runner) = api::AsyncApi::new(
 				self.network_provider.clone(),
 				self.is_validator,
+				self.is_guardian,
 				self.shared_http_client.clone(),
 			);
 			tracing::debug!(target: LOG_TARGET, "Spawning offchain workers at {hash:?}");
@@ -454,6 +460,7 @@ mod tests {
 			transaction_pool: Some(OffchainTransactionPoolFactory::new(pool.clone())),
 			network_provider: network,
 			is_validator: false,
+			is_guardian: false,
 			enable_http_requests: false,
 			custom_extensions: |_| Vec::new(),
 		});

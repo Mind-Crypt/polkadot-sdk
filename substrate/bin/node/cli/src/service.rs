@@ -745,6 +745,7 @@ pub fn new_full_base(
 				)),
 				network_provider: network.clone(),
 				is_validator: role.is_authority(),
+				is_guardian: false,
 				enable_http_requests: true,
 				custom_extensions: move |_| {
 					vec![Box::new(statement_store.clone().as_statement_store_ext()) as Box<_>]

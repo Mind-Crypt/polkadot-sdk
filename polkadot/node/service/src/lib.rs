@@ -985,6 +985,7 @@ pub fn new_full<OverseerGenerator: OverseerGen>(
 				)),
 				network_provider: network.clone(),
 				is_validator: role.is_authority(),
+				is_guardian: false,
 				enable_http_requests: false,
 				custom_extensions: move |_| vec![],
 			})
