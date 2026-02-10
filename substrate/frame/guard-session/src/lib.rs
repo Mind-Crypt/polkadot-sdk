@@ -416,6 +416,7 @@ use super::*;
 	pub type Agreements<T> = StorageMap<_, Twox64Concat, [u8; 32], AgreementStatus, OptionQuery>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn agreement_responses)]
 	pub type AgreementsResponses<T> = StorageMap<_, Twox64Concat, [u8; 32], Vec<([u8; 32], bool)>, OptionQuery>;
 
 	#[pallet::event]
@@ -424,7 +425,7 @@ use super::*;
 		/// New session has happened. Note that the argument is the session index, not the
 		/// block number as the type might suggest.
 		NewSession { session_index: SessionIndex },
-		NewAgreement { agrement: [u8; 32], signer: [u8; 32], acceptance: bool },
+		AgreementResponse { agrement: [u8; 32], signer: [u8; 32], acceptance: bool },
 	}
 
 	#[pallet::error]
@@ -465,23 +466,6 @@ use super::*;
 					"Accepting agreements at {:?}. Not a validator.",
 					now,
 				)
-			}
-		}
-
-		fn on_finalize(_n: BlockNumberFor<T>) {
-			// Process collected unsigned agreement responses and update agreement status.
-			for agreementid in AgreementsResponses::<T>::iter_keys() {
-				if let Some(resp_list) = AgreementsResponses::<T>::get(&agreementid) {
-					// if any responder accepted -> mark Accepted, otherwise Rejected
-					let any_false = resp_list.iter().any(|(_, acc)| acc.not());
-					let new_status = if any_false {
-						AgreementStatus::Rejected
-					} else {
-						AgreementStatus::Accepted
-					};
-					Agreements::<T>::insert(&agreementid, new_status);
-					AgreementsResponses::<T>::remove(&agreementid);
-				}
 			}
 		}
 	}
@@ -538,7 +522,7 @@ use super::*;
 			AgreementsResponses::<T>::mutate(&agreementid, |opt| {
 				opt.get_or_insert_with(Vec::new).push((peer_id, acceptance));
 			});
-			Self::deposit_event(Event::NewAgreement { agrement: agreementid, signer: peer_id, acceptance});
+			Self::deposit_event(Event::AgreementResponse { agrement: agreementid, signer: peer_id, acceptance});
 
 			Ok(().into())
 		}
