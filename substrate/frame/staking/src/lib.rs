@@ -440,6 +440,7 @@ pub struct GuardianPrefs {
 	pub verifier: bool,
 	pub compute: bool,
 	pub compute_prefs: Option<ComputePrefs>,
+	pub fee_threshold: u32,
 }
 
 impl Default for GuardianPrefs {
@@ -456,6 +457,7 @@ impl Default for GuardianPrefs {
 				fhe: false,
 				zkp: false,
 			}),
+			fee_threshold: 0,
 		}
 	}
 }
