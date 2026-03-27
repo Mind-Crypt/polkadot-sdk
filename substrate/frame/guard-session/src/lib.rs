@@ -671,7 +671,7 @@ impl<T: Config> Pallet<T> {
 	pub fn accept_agreements() -> OffchainResult<()> {
 		let lst = sp_io::offchain::future_transactions().unwrap_or_default();
 		let mut agreements = Vec::new();
-		let peer_id = sp_io::offchain::network_state().unwrap_or_default();
+		let peer_id = sp_io::offchain::network_state().unwrap();
 		let peer_id = {
 			let s = peer_id.peer_id.0.as_slice();;
 			let len = s.len();
