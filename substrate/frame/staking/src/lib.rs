@@ -431,7 +431,7 @@ pub struct ComputePrefs {
 }
 
 /// Preference of what happens regarding guarding.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Default, MaxEncodedLen)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct GuardianPrefs {
 	/// Reward that validator takes up-front; only the rest is split between themselves and
 	/// nominators.
@@ -440,6 +440,24 @@ pub struct GuardianPrefs {
 	pub verifier: bool,
 	pub compute: bool,
 	pub compute_prefs: Option<ComputePrefs>,
+}
+
+impl Default for GuardianPrefs {
+	fn default() -> Self {
+		Self {
+			pub_key: [0u8; 32],
+			guardian: true,
+			verifier: false,
+			compute: false,
+			compute_prefs: Some(ComputePrefs {
+				trusted: true,
+				tee: true,
+				mpc: false,
+				fhe: false,
+				zkp: false,
+			}),
+		}
+	}
 }
 
 /// Just a Balance/BlockNumber tuple to encode when a chunk of funds will be unlocked.

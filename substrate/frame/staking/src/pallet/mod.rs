@@ -798,6 +798,10 @@ pub mod pallet {
 						T::RuntimeOrigin::from(Some(stash.clone()).into()),
 						votes.iter().map(|l| T::Lookup::unlookup(l.clone())).collect(),
 					),
+					crate::StakerStatus::Guardian => <Pallet<T>>::guard(
+						T::RuntimeOrigin::from(Some(stash.clone()).into()),
+						Default::default(),
+					),
 					_ => Ok(()),
 				});
 				assert!(
