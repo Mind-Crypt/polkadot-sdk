@@ -274,7 +274,7 @@ use super::*;
 	#[pallet::config]
 	pub trait Config: SendTransactionTypes<Call<Self>> + frame_system::Config {
 		/// The overarching event type.
-		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// A stable ID for a guardian.
 		type GuardianId: Member
@@ -344,13 +344,19 @@ use super::*;
 	#[pallet::getter(fn guardians)]
 	pub type Guardians<T: Config> = StorageValue<_, Vec<T::GuardianId>, ValueQuery>;
 
-	/// Where the guardian services are running. Keyed by nodeid.
-	///
-	/// TWOX-NOTE: SAFE since `AccountId` is a secure hash.
+
+	/// Mapping from guardian session key to stash AccountId.
+	/// Used by the offchain worker to resolve its own AccountId without needing the peer id.
 	#[pallet::storage]
-	#[pallet::getter(fn worker)]
-	pub type Worker<T: Config> =
-		StorageMap<_, Twox64Concat, [u8; 32], T::AccountId, OptionQuery>;
+	#[pallet::getter(fn worker_by_key)]
+	pub type WorkerByKey<T: Config> =
+			StorageMap<_, Twox64Concat, GuardianId, T::AccountId, OptionQuery>;
+
+	/// Reverse mapping from stash AccountId to guardian session key.
+	#[pallet::storage]
+	#[pallet::getter(fn worker_by_account)]
+	pub type WorkerByAccount<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, GuardianId, OptionQuery>;
 
 	/// The upcoming (next) set of guardians.
 	#[pallet::storage]
@@ -388,15 +394,15 @@ use super::*;
 
 	#[pallet::storage]
 	#[pallet::getter(fn agreement_responses)]
-	pub type AgreementsResponses<T> = StorageMap<_, Twox64Concat, [u8; 32], Vec<([u8; 32], bool)>, OptionQuery>;
+	pub type AgreementsResponses<T: Config> = StorageMap<_, Twox64Concat, [u8; 32], Vec<(T::AccountId, bool)>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event {
+	pub enum Event<T: Config> {
 		/// New session has happened. Note that the argument is the session index, not the
 		/// block number as the type might suggest.
 		NewSession { session_index: SessionIndex },
-		AgreementResponse { agrement: [u8; 32], signer: [u8; 32], acceptance: bool },
+		AgreementResponse { agrement: [u8; 32], signer: T::AccountId, acceptance: bool },
 	}
 
 	#[pallet::error]
@@ -462,10 +468,14 @@ use super::*;
 		#[pallet::weight(Weight::from_parts(16_980_000, 4556))]
 		pub fn set_worker(
 			origin: OriginFor<T>,
-			nodeid: [u8; 32],
+			guardian_key: GuardianId,
 		) -> DispatchResult {
-			let controller = ensure_signed(origin)?;
-			<Worker<T>>::insert(nodeid, controller);
+			let who = ensure_signed(origin)?;
+			if let Some(old_key) = <WorkerByAccount<T>>::get(&who) {
+				<WorkerByKey<T>>::remove(old_key);
+			}
+			<WorkerByKey<T>>::insert(guardian_key.clone(), who.clone());
+			<WorkerByAccount<T>>::insert(who, guardian_key);
 
 			Ok(())
 		}
@@ -475,7 +485,7 @@ use super::*;
 		pub fn agreement_response(
 			origin: OriginFor<T>,
 			agreementid: [u8; 32],
-			peer_id: [u8; 32],
+			address: T::AccountId,
 			// since signature verification is done in `validate_unsigned`
 			// we can skip doing it here again.
 			_signature: <GuardianId as RuntimeAppPublic>::Signature,
@@ -483,9 +493,9 @@ use super::*;
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
 			AgreementsResponses::<T>::mutate(&agreementid, |opt| {
-				opt.get_or_insert_with(Vec::new).push((peer_id, acceptance));
+				opt.get_or_insert_with(Vec::new).push((address.clone(), acceptance));
 			});
-			Self::deposit_event(Event::AgreementResponse { agrement: agreementid, signer: peer_id, acceptance});
+			Self::deposit_event(Event::AgreementResponse { agrement: agreementid, signer: address, acceptance});
 
 			Ok(().into())
 		}
@@ -500,11 +510,11 @@ use super::*;
 		type Call = Call<T>;
 
 		fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-			if let Call::agreement_response { agreementid, peer_id, signature, .. } = call {
+			if let Call::agreement_response { agreementid, address, signature, .. } = call {
 
 				ValidTransaction::with_tag_prefix("GuardAgreement")
 					.priority(TransactionPriority::MAX)
-					.and_provides((peer_id, agreementid))
+					.and_provides((address, agreementid))
 					.longevity(64_u64)
 					.propagate(true)
 					.build()
@@ -615,7 +625,7 @@ impl<T: Config> Pallet<T> {
 		DefafaultGroupsMarker::<T>::put(value);
 	}
 
-	fn sign_and_send(agreements: Vec<([u8; 32], &[u8; 32], bool)>) -> OffchainResult<()> {
+	fn sign_and_send(agreements: Vec<([u8; 32], T::AccountId, bool)>) -> OffchainResult<()> {
 		// local keystore
 		//
 		// All `GuardianId` public (+private) keys currently in the local keystore.
@@ -633,11 +643,11 @@ impl<T: Config> Pallet<T> {
 		// TODO: remove signing using local_keys
 		local_keys.iter().for_each(|key| {
 			log::trace!(target: LOG_TARGET, "Signing agreement unconditionally");
-			for (agreementid, peer_id, acceptance) in agreements.clone() {
+			for (agreementid, address, acceptance) in agreements.clone() {
 				let signature = key.sign(&agreementid.encode()).ok_or(OffchainErr::FailedSigning);
 				let signature = signature.unwrap();
 	
-				let call = Call::agreement_response { agreementid, peer_id: *peer_id, signature, acceptance };
+				let call = Call::agreement_response { agreementid, address: address.clone(), signature, acceptance };
 	
 				SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).unwrap_or_else(|e| {
 						log::error!(target: LOG_TARGET, "Failed to submit agreement transaction. Error = {e:?}");
@@ -653,11 +663,11 @@ impl<T: Config> Pallet<T> {
 				.map(|location| (index as u32, local_keys[location].clone()))
 		}).map(move |(_, key)| {
 			log::trace!(target: LOG_TARGET, "Signing agreement with as guardian");
-			for (agreementid, peer_id, acceptance) in agreements.clone() {
+			for (agreementid, address, acceptance) in agreements.clone() {
 				let signature = key.sign(&agreementid.encode()).ok_or(OffchainErr::FailedSigning);
 				let signature = signature.unwrap();
 	
-				let call = Call::agreement_response { agreementid, peer_id: *peer_id, signature, acceptance };
+				let call = Call::agreement_response { agreementid, address: address.clone(), signature, acceptance };
 	
 				SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()).unwrap_or_else(|e| {
 						log::error!(target: LOG_TARGET, "Failed to submit agreement transaction. Error = {e:?}");
@@ -671,19 +681,35 @@ impl<T: Config> Pallet<T> {
 	pub fn accept_agreements() -> OffchainResult<()> {
 		let lst = sp_io::offchain::future_transactions().unwrap_or_default();
 		let mut agreements = Vec::new();
-		let peer_id = sp_io::offchain::network_state().unwrap();
-		let peer_id = {
-			let s = peer_id.peer_id.0.as_slice();;
-			let len = s.len();
-			let start = if len >= 32 { len - 32 } else { 0 };
-			let last = &s[start..];
-			let mut arr = [0u8; 32];
-			arr[(32 - last.len())..].copy_from_slice(last);
-			arr
+
+		// Derive the guardian key from the local network PeerId (last 32 bytes),
+		// consistent with how peer_available() and local_guardian_account() work.
+		let nw_state = sp_io::offchain::network_state()
+			.map_err(|_| OffchainErr::FailedToAcquireLock)?;
+		let raw = nw_state.peer_id.0;
+		let Ok(guardian_key): Result<[u8; 32], _> =
+			raw[raw.len().saturating_sub(32)..].try_into()
+		else {
+			log::warn!(
+				target: LOG_TARGET,
+				"PeerId too short to derive guardian key; skipping agreements"
+			);
+			return Ok(());
 		};
+		use sp_core::crypto::UncheckedFrom;
+		let my_address: T::AccountId =
+			match WorkerByKey::<T>::get(GuardianId::unchecked_from(guardian_key)) {
+				Some(addr) => addr,
+				None => {
+					log::warn!(
+						target: LOG_TARGET,
+						"No registered address found for local PeerId-derived guardian key; skipping agreements"
+					);
+					return Ok(());
+				},
+			};
 
 		for item in lst.into_iter() {
-			let slice: &[u8] = &item;
 			let item_hash = blake2_256(&item);
 			let store = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, item_hash.as_ref());
 
@@ -701,7 +727,7 @@ impl<T: Config> Pallet<T> {
 			}
 
 			log::trace!(target: LOG_TARGET, "Accepting agreement {:?}", et.2);
-			agreements.push((et.2, &peer_id, AgreementAction::Accept == et.0));
+			agreements.push((et.2, my_address.clone(), AgreementAction::Accept == et.0));
 
 			sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, item_hash.as_ref(), Encode::encode(&(et.0, AgreementState::Processed, et.2)).as_slice());
 		}
