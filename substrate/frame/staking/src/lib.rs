@@ -430,6 +430,26 @@ pub struct ComputePrefs {
 	pub zkp: bool,
 }
 
+/// Class of compute a guardian can be asked to take on. Mirrors the flags in [`ComputePrefs`],
+/// and is the key a fee threshold is declared against.
+#[derive(
+	PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen,
+)]
+pub enum ComputeType {
+	Trusted,
+	Tee,
+	Mpc,
+	Fhe,
+	Zkp,
+}
+
+/// Maximum number of per-compute-type fee thresholds a guardian may declare.
+pub type MaxFeeThresholds = ConstU32<8>;
+
+/// The minimum rate a guardian takes work on at, declared per compute type. A compute type
+/// absent from the list carries no threshold and reads as zero.
+pub type FeeThresholds = BoundedVec<(ComputeType, u128), MaxFeeThresholds>;
+
 /// Preference of what happens regarding guarding.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct GuardianPrefs {
@@ -440,7 +460,7 @@ pub struct GuardianPrefs {
 	pub verifier: bool,
 	pub compute: bool,
 	pub compute_prefs: Option<ComputePrefs>,
-	pub fee_threshold: u128,
+	pub fee_thresholds: FeeThresholds,
 }
 
 impl Default for GuardianPrefs {
@@ -457,8 +477,25 @@ impl Default for GuardianPrefs {
 				fhe: false,
 				zkp: false,
 			}),
-			fee_threshold: 0,
+			fee_thresholds: Default::default(),
 		}
+	}
+}
+
+impl GuardianPrefs {
+	/// The rate this guardian takes `compute_type` work on at, or zero when none was declared.
+	pub fn fee_threshold(&self, compute_type: ComputeType) -> u128 {
+		self.fee_thresholds
+			.iter()
+			.find(|(declared, _)| *declared == compute_type)
+			.map_or(0, |(_, threshold)| *threshold)
+	}
+
+	/// Whether the same compute type is priced more than once.
+	pub fn has_duplicate_fee_thresholds(&self) -> bool {
+		self.fee_thresholds.iter().enumerate().any(|(index, (compute_type, _))| {
+			self.fee_thresholds[..index].iter().any(|(seen, _)| seen == compute_type)
+		})
 	}
 }
 

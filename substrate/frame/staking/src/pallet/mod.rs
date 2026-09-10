@@ -2085,6 +2085,10 @@ pub mod pallet {
 					Error::<T>::InvalidGuardianPrefs
 				);
 			}
+			ensure!(
+				!prefs.has_duplicate_fee_thresholds(),
+				Error::<T>::InvalidGuardianPrefs
+			);
 
 			ensure!(ledger.active >= MinGuardianBond::<T>::get(), Error::<T>::InsufficientBond);
 			let stash = &ledger.stash;
